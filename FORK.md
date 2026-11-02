@@ -24,14 +24,20 @@ node scripts/sync-upstream.mjs        # merges and checks, does not push
 git push origin main
 ```
 
-On a conflict nothing is changed and the files are listed. To resolve them:
+On a conflict nothing is changed and the files are listed. To resolve them, in a clone of `paseo-plugins` run:
 
 ```bash
-git fetch https://github.com/stevecastaneda/paseo-plugins.git main
-git subtree split --prefix=shell-yeah -b upstream-split FETCH_HEAD   # run inside a clone of paseo-plugins
+git subtree split --prefix=shell-yeah -b upstream-split
 ```
 
-Or, simpler, in a clone of `paseo-plugins` run `git subtree split --prefix=shell-yeah -b upstream-split`, then in this repository `git pull <path-to-that-clone> upstream-split`, fix the conflicts, run `npm run typecheck && npm test`, commit and push.
+then in this repository:
+
+```bash
+git pull <path-to-that-clone> upstream-split
+# fix the conflicts, then
+npm run typecheck && npm test
+git commit && git push origin main
+```
 
 The script's exit code says what happened: `0` up to date or merged, `1` not run (wrong branch, uncommitted changes, upstream unreachable), `2` conflict, `3` checks failed, `4` could not push.
 
