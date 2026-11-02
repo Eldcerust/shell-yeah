@@ -6,6 +6,7 @@ import { LIMITS } from "../shared/limits.ts";
 import { start, suggest } from "../shared/rpc.ts";
 import { basename, errorMessage, risksOf, shortCommand, splitTitle, wrappedLines } from "../shared/text.ts";
 import { capitalize } from "../shared/view.ts";
+import { AutoSwitches } from "./auto-switches.tsx";
 import { isLight, makePalette, withAlpha, type ThemeColors } from "./palette.ts";
 import { Button, Spinner, codeSurface, mono } from "./ui.tsx";
 
@@ -123,6 +124,7 @@ function AgentRunWindow({ agentId, colors, compact, close }: { agentId: string; 
           box.current?.focus();
         }} />
       </View>
+      <AutoSwitches colors={colors} compact={compact} />
     </View>
   );
 }

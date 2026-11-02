@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Line, PastRun, Phase, RunRow } from "./row.ts";
-import { describe, formatDuration, pastRow, pastRunView, statusText, switcher, type ResolvedRun } from "./view.ts";
+import { autoCaption, describe, formatDuration, pastRow, pastRunView, statusText, switcher, type ResolvedRun } from "./view.ts";
 
 const T0 = 1_700_000_000_000;
 
@@ -226,4 +226,16 @@ test("an earlier run shows as its own status and output, with Rerun, Copy and Se
   assert.deepEqual(ids(p), ["send", "copy", "rerun"]);
   assert.deepEqual(p.notes[1], { icon: "scissors", text: "Last 1 of 40 lines" });
   assert.deepEqual(pastRow(card, failed), { runId: "r2", rev: 9, origin: "user", command: "npm test", cwd: "/repo", phase: failed.phase, output: failed.output, sentAt: null, terminal: true, cardId: "r1", runNumber: 2 });
+});
+
+test("the Run window says what its two switches mean together, and warns when nobody is watching", () => {
+  assert.deepEqual(autoCaption(false, false, 20).tone, "muted");
+  assert.match(autoCaption(false, false, 20).text, /you press Run on each command/);
+  assert.equal(autoCaption(true, false, 20).tone, "warning");
+  assert.match(autoCaption(true, false, 20).text, /Results wait for you/);
+  assert.equal(autoCaption(true, true, 20).tone, "warning");
+  assert.match(autoCaption(true, true, 20).text, /without you\. At most 20 commands/);
+  // Sending alone does nothing, and the caption says so instead of implying it works.
+  assert.equal(autoCaption(false, true, 20).tone, "muted");
+  assert.match(autoCaption(false, true, 20).text, /does nothing while Run automatically is off/);
 });
