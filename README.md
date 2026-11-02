@@ -64,13 +64,20 @@ After **Run**, the card shows the output like any other run, and **Send to Claud
 
 ### Running commands automatically
 
-By default nothing an agent suggests runs until you press **Run**. If you trust the agent with it, turn on **Run commands automatically** under **Settings → Plugins → Shell Yeah → Commands from the agent**. The cards then start themselves as soon as the reply ends, as if you had pressed **Run** on each.
+By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Two settings under **Settings → Plugins → Shell Yeah → Commands from the agent** change that. Both are off by default and apply to every chat.
+
+- **Run commands automatically.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
+- **Send the result to the agent.** When the commands started that way are done, their output goes back to the agent, as **Send** sends it, so it can carry on without you.
+
+With both on, an agent can run a command, read the result and write the next command with nobody pressing anything.
 
 - Several commands in one reply run one after another, each after the one before finished, and the chain stops at the first that fails or is stopped. The ones left over stay as cards with **Run**.
 - Turning the setting off stops the commands still waiting. A command already running keeps going; **Stop** it from its card.
 - Only the `sh run` blocks an agent wrote count, the same ones that get a card. **/sh**, the **Run** window and plain shell blocks are not started for you.
 - The commands run on this computer as you, with no confirmation, so a reply that quotes untrusted text could include one. Leave it off for agents you wouldn't give a shell.
 - A command that asks for a login or a code waits for you to type it in its card, as it does after pressing **Run**.
+- Results go back once every command in the reply is done, in order. A failure is sent too, since it is what the agent needs. A command you stopped is not sent. If the agent is waiting for you to approve something, the result stays unsent and the card's **Send** button is still there.
+- At most 20 commands start this way per chat in an hour. With results going back, an agent can answer each one with the next, so this is the brake on a loop nobody is watching. Past it, the cards wait for **Run**.
 
 <img src="images/5-ran.png" alt="The deploy card after pressing Run: the command finished and Send to Claude is ready" width="600">
 
@@ -114,7 +121,7 @@ Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.j
 
 ### 1.4.0
 
-- [New] **Run commands automatically.** A setting, off by default, that starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. It is under **Settings → Plugins → Shell Yeah**.
+- [New] **Run commands automatically** and **Send the result to the agent.** Two settings, both off by default. The first starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. The second sends their output back to the agent when they are done. At most 20 commands start this way per chat in an hour. Both are under **Settings → Plugins → Shell Yeah**.
 
 ### 1.3.1
 

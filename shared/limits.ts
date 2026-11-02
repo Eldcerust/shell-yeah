@@ -29,6 +29,9 @@ export const LIMITS = {
   // Lines a card can scroll back through, live and in its row; Copy gets everything kept.
   scrollbackLines: 300,
   proposalsPerReply: 4,
+  // Commands started automatically for one chat in an hour. With results sent back, an agent can
+  // answer each one with the next, so this is the brake on a loop nobody is watching.
+  autoRunsPerHour: 20,
   suggestionsPerReply: 8,
   tailCoalesceMs: 60,
   tailWaitMs: 1_500,

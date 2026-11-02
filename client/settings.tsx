@@ -15,11 +15,18 @@ export function ShellYeahSettings({ theme }: Pick<PluginSurfaceProps, "theme">) 
         <SettingsCard>
           <SettingsSwitch
             label="Run commands automatically"
-            hint="When an agent hands you a command in a Run card, start it as soon as the reply ends instead of waiting for you to press Run. Several commands in one reply run one after another and stop at the first that fails. They run on this computer as you, with no confirmation, so only turn this on for agents you trust with it. Off by default."
-            error={settings.saveError}
-            value={settings.values.enabled}
+            hint="When an agent hands you a command in a Run card, start it as soon as the reply ends instead of waiting for you to press Run. Several commands in one reply run one after another and stop at the first that fails. They run on this computer as you, with no confirmation, so only turn this on for agents you trust with it. At most 20 start per chat an hour. Off by default."
+            value={settings.values.run}
             disabled={settings.saving}
-            onValueChange={(enabled) => void settings.save({ ...settings.values, enabled }, settings.revision)}
+            onValueChange={(run) => void settings.save({ ...settings.values, run }, settings.revision)}
+          />
+          <SettingsSwitch
+            label="Send the result to the agent"
+            hint="When commands started that way finish, send their output back to the agent, as the Send button does, so it can carry on without you. A failure is sent too; one you stopped is not. The agent may answer with its next command, which Run commands automatically then starts. Off by default."
+            error={settings.saveError}
+            value={settings.values.send}
+            disabled={settings.saving}
+            onValueChange={(send) => void settings.save({ ...settings.values, send }, settings.revision)}
           />
         </SettingsCard>
       ) : (
@@ -28,7 +35,7 @@ export function ShellYeahSettings({ theme }: Pick<PluginSurfaceProps, "theme">) 
           <SettingsCard>
             <SettingsAction label="Try again" actionLabel="Reload" onPress={settings.reload} />
             {settings.status === "invalid" ? (
-              <SettingsAction label="Reset to the default (off)" actionLabel="Reset" onPress={settings.reset} />
+              <SettingsAction label="Reset to the defaults (both off)" actionLabel="Reset" onPress={settings.reset} />
             ) : null}
           </SettingsCard>
         </>

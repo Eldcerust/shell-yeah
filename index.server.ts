@@ -1,7 +1,7 @@
 import type { PluginHandlerContext, PluginServerContext } from "@getpaseo/plugin/server";
 import { agentOf, attachItems, fetchTurn, latestAssistantText, proposeFromReply, scanProposals, sendToClaude, sendVia, withHandoffPrompt, type AttachDeps } from "./server/claude.ts";
 import { createLogStore, defaultLogRoot } from "./server/logs.ts";
-import { autoRun } from "./server/autorun.ts";
+import { autoRun, createAutoRunBudget } from "./server/autorun.ts";
 import { createRunRegistry } from "./server/runs.ts";
 import { commandFinder } from "./server/shells.ts";
 import { attachSearch, dismiss, fullOutput, input, scan, send, start, stop, suggest, tail } from "./shared/rpc.ts";
@@ -23,10 +23,12 @@ export default function contribute(server: PluginServerContext) {
     env: process.env,
   });
   const autoRunSetting = server.registerSettings(autoRunSettings);
-  const autoRunEnabled = async () => {
+  // An unreadable setting counts as off: nothing starts or sends on a guess.
+  const autoSetting = async (name: "run" | "send") => {
     const state = await autoRunSetting.read();
-    return state.status === "ready" && state.values.enabled;
+    return state.status === "ready" && state.values[name];
   };
+  const autoBudget = createAutoRunBudget(Date.now);
   const sendCounts = new Map<string, number>();
   const logs = createLogStore({ root: defaultLogRoot() });
   const saved: AttachDeps["saved"] = new Map();
@@ -80,9 +82,23 @@ export default function contribute(server: PluginServerContext) {
     if (!turn) return;
     const proposed: RunRow[] = [];
     await proposeFromReply({ registry: runs, agentId: event.agent.id, cwd: event.agent.cwd, turn, mode: "marked", onProposed: (row) => proposed.push(row) });
-    // With Run commands automatically on, the cards just added start themselves. Not awaited:
+    // With Run commands automatically on, the cards just added start themselves, and with
+    // Send the result on, their output goes back to the agent when they are done. Not awaited:
     // a long command must not hold the hook, and the cards already show what is happening.
-    if (proposed.length > 0) void autoRun({ registry: runs, enabled: autoRunEnabled }, event.agent.id, proposed).catch(() => undefined);
+    if (proposed.length > 0) {
+      const deps = { runs, logs, agent: agentOf(ctx.paseo), send: sendVia(ctx.paseo), sendCounts };
+      void autoRun(
+        {
+          registry: runs,
+          enabled: () => autoSetting("run"),
+          sends: () => autoSetting("send"),
+          send: (runId) => sendToClaude(deps, { agentId: event.agent.id, runId }),
+          budget: autoBudget,
+        },
+        event.agent.id,
+        proposed,
+      ).catch(() => undefined);
+    }
   });
 
   // An archived chat is done with: its saved logs go with it. Archiving a workspace archives its chats.
