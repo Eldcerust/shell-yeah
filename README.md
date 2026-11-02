@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/stevecastaneda/paseo-plugins/main/shell-yeah/icon.png" alt="" width="64" height="64">
+<img src="icon.png" alt="" width="64" height="64">
 
 # Shell Yeah
 
@@ -114,8 +114,10 @@ Run cards need the agent to know the `sh run` rule. Paseo passes it to new Claud
 ## Install
 
 ```sh
-paseo plugin add npm:@stevecastaneda/paseo-shell-yeah
+paseo plugin add git:Eldcerust/shell-yeah
 ```
+
+This is a fork, and it has the same plugin ID as the original, so install one or the other. To use the original instead: `paseo plugin add npm:@stevecastaneda/paseo-shell-yeah`.
 
 Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.js 22.18 or later on the daemon host.
 
