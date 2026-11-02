@@ -66,10 +66,11 @@ After **Run**, the card shows the output like any other run, and **Send to Claud
 
 ### Running commands automatically
 
-By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Two switches at the bottom of the **Run** window (the Run pill in the message box) change that. Both are off by default and apply to every chat, and a change takes effect for the next reply. A line under them says what the current setting does.
+By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Three switches at the bottom of the **Run** window (the Run pill in the message box) change that. Both are off by default and apply to every chat, and a change takes effect for the next reply. A line under them says what the current setting does.
 
 - **Auto-run.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
-- **Auto forward results.** When a command the agent handed you finishes, its output goes back to the agent, as **Send** sends it, so it can carry on without you. It works the same for a command **Auto-run** started and for one you started by pressing **Run** on its card. It does not send commands you type yourself (**/sh** or the **Run** window's box).
+- **Auto forward results.** When a command the agent handed you finishes, its output goes back to the agent, as **Send** sends it, so it can carry on without you. It works the same for a command **Auto-run** started and for one you started by pressing **Run** on its card.
+- **Forward my own commands.** The same for the commands you type yourself, with **/sh** or in the **Run** window. It is its own switch because what one of your own commands prints, a token for instance, goes to the agent. It is independent of the other two.
 
 With both on, an agent can run a command, read the result and write the next command with nobody pressing anything.
 

@@ -228,15 +228,16 @@ test("an earlier run shows as its own status and output, with Rerun, Copy and Se
   assert.deepEqual(pastRow(card, failed), { runId: "r2", rev: 9, origin: "user", command: "npm test", cwd: "/repo", phase: failed.phase, output: failed.output, sentAt: null, terminal: true, cardId: "r1", runNumber: 2 });
 });
 
-test("the Run window says what its two switches mean together, and warns when nobody is watching", () => {
-  assert.deepEqual(autoCaption(false, false, 20).tone, "muted");
-  assert.match(autoCaption(false, false, 20).text, /^Off\./);
-  assert.equal(autoCaption(true, false, 20).tone, "warning");
-  assert.match(autoCaption(true, false, 20).text, /Results wait for Send/);
-  assert.equal(autoCaption(true, true, 20).tone, "warning");
-  assert.match(autoCaption(true, true, 20).text, /no one watching\. Max 20 per chat an hour/);
-  // Forwarding alone works for commands you run from the agent's cards, and the caption says it
-  // sends output away, so it is a warning too.
-  assert.equal(autoCaption(false, true, 20).tone, "warning");
-  assert.match(autoCaption(false, true, 20).text, /go back to it when they finish/);
+test("the Run window says what its three switches mean together, and warns whenever something leaves or runs by itself", () => {
+  const off = autoCaption(false, false, false, 20);
+  assert.deepEqual([off.tone, off.text], ["muted", "Off. Applies to every chat."]);
+  assert.equal(autoCaption(true, false, false, 20).text, "Agent commands start on their own.");
+  assert.equal(autoCaption(true, false, false, 20).tone, "warning");
+  assert.equal(autoCaption(true, true, false, 20).text, "Agent commands start on their own. Their results go back. No one is watching. Max 20 per chat an hour.");
+  // Forwarding alone covers commands run from the agent's cards.
+  assert.equal(autoCaption(false, true, false, 20).text, "Results of the agent's commands go back.");
+  // The own-commands switch is independent of the other two, and says what it sends.
+  assert.equal(autoCaption(false, false, true, 20).text, "Your own commands' results go back to the agent.");
+  assert.equal(autoCaption(false, false, true, 20).tone, "warning");
+  assert.equal(autoCaption(false, true, true, 20).text, "Results of the agent's commands go back. Your own commands' results go back to the agent.");
 });

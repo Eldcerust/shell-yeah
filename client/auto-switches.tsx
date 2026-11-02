@@ -28,13 +28,14 @@ export function AutoSwitches({ colors, compact }: { colors: ThemeColors; compact
     );
   }
 
-  const { run, send } = settings.values;
-  const caption = autoCaption(run, send, LIMITS.autoRunsPerHour);
-  const save = (next: { run: boolean; send: boolean }) => void settings.save(next, settings.revision);
+  const { run, send, own } = settings.values;
+  const caption = autoCaption(run, send, own, LIMITS.autoRunsPerHour);
+  const save = (next: { run: boolean; send: boolean; own: boolean }) => void settings.save(next, settings.revision);
   return (
     <View style={divider}>
-      <Row label="Auto-run" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value, send })} />
-      <Row label="Auto forward results" value={send} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run, send: value })} />
+      <Row label="Auto-run" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value, send, own })} />
+      <Row label="Auto forward results" value={send} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run, send: value, own })} />
+      <Row label="Forward my own commands" value={own} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run, send, own: value })} />
       <Text style={{ ...muted, color: caption.tone === "warning" ? colors.statusWarning : colors.foregroundMuted }}>{caption.text}</Text>
       {settings.saveError ? <Text style={{ ...muted, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
     </View>

@@ -15,13 +15,13 @@ const row = (extra: Partial<RunRow> = {}): RunRow => ({
   runId: "r1", rev: 3, origin: "claude", command: "npm test", cwd: "/w", phase: ok, output: { lines: ["done"], total: 1 }, sentAt: null, ...extra,
 });
 
-function deps(options: { on?: () => boolean; failWith?: Array<Error | undefined> } = {}) {
+function deps(options: { on?: (origin: RunRow["origin"]) => boolean; failWith?: Array<Error | undefined> } = {}) {
   const sent: string[] = [];
   const waited: number[] = [];
   const logged: string[] = [];
   let attempt = 0;
   const forward: ForwardDeps = {
-    enabled: async () => (options.on ? options.on() : true),
+    enabled: async (origin) => (options.on ? options.on(origin) : true),
     send: async (agentId, runId) => {
       const problem = options.failWith?.[attempt++];
       if (problem) throw problem;
@@ -33,7 +33,23 @@ function deps(options: { on?: () => boolean; failWith?: Array<Error | undefined>
   return { forward, sent, waited, logged };
 }
 
-test("a command the agent handed over that finished is sent, whether or not Auto-run started it", async () => {
+test("a command the agent handed over is sent when Auto forward results is on, and a typed one is not", async () => {
+  const d = deps({ on: (origin) => origin === "claude" });
+  await forwardResult(d.forward, "a", row({ origin: "user" }));
+  assert.deepEqual(d.sent, []);
+  await forwardResult(d.forward, "a", row({ origin: "claude" }));
+  assert.deepEqual(d.sent, ["a:r1"]);
+});
+
+test("a command you typed is sent only when Forward my own commands is on, and an agent's is not", async () => {
+  const d = deps({ on: (origin) => origin === "user" });
+  await forwardResult(d.forward, "a", row({ origin: "claude" }));
+  assert.deepEqual(d.sent, []);
+  await forwardResult(d.forward, "a", row({ origin: "user" }));
+  assert.deepEqual(d.sent, ["a:r1"]);
+});
+
+test("the plain case is logged as sent", async () => {
   const d = deps();
   await forwardResult(d.forward, "a", row());
   assert.deepEqual(d.sent, ["a:r1"]);
@@ -46,25 +62,28 @@ test("a failure is sent too, since it is what the agent needs", async () => {
   assert.deepEqual(d.sent, ["a:r1"]);
 });
 
-test("a command the user stopped, one that was interrupted, and one still running are not sent", async () => {
+test("a command the user stopped, one that was interrupted, and one still running are not sent, and a stop is logged", async () => {
   for (const phase of [stopped, interrupted, { kind: "running", startedAt: T0, stopRequestedAt: null } as Phase, { kind: "proposed" } as Phase]) {
     const d = deps();
     await forwardResult(d.forward, "a", row({ phase }));
     assert.deepEqual(d.sent, [], phase.kind);
+    if (phase.kind === "stopped" || phase.kind === "interrupted") assert.equal(d.logged[0], `forward r1: not sent, it was ${phase.kind}`);
   }
 });
 
-test("a command the user typed is not sent, and neither is one that was sent already", async () => {
+test("a result that was sent already is not sent again, and says so", async () => {
   const d = deps();
-  await forwardResult(d.forward, "a", row({ origin: "user" }));
   await forwardResult(d.forward, "a", row({ sentAt: T0 }));
   assert.deepEqual(d.sent, []);
+  assert.equal(d.logged[0], "forward r1: not sent, it was sent already");
 });
 
-test("nothing is sent while the setting is off", async () => {
+test("nothing is sent while the switch is off, and nothing is logged for every command", async () => {
   const d = deps({ on: () => false });
   await forwardResult(d.forward, "a", row());
+  await forwardResult(d.forward, "a", row({ phase: stopped }));
   assert.deepEqual(d.sent, []);
+  assert.deepEqual(d.logged, []);
 });
 
 test("a passing failure is tried again after a pause, and the retry is logged", async () => {

@@ -368,7 +368,7 @@ test("a long run in the attach menu saves its full log once per revision, from e
 type Entry = { item: Record<string, unknown>; turnId?: string };
 type Cursor = { epoch: string; seq: number };
 
-function fakeServer(options: { autoRun?: boolean; autoSend?: boolean } = {}) {
+function fakeServer(options: { autoRun?: boolean; autoSend?: boolean; autoOwn?: boolean } = {}) {
   const appended: Array<{ agentId: string; id: string; data: RunRow }> = [];
   const sentToAgent: Array<{ agentId: string; text: string; opts: Record<string, unknown> }> = [];
   const fetches: Array<{ direction: string; limit: number | undefined }> = [];
@@ -417,7 +417,7 @@ function fakeServer(options: { autoRun?: boolean; autoSend?: boolean } = {}) {
     on: (name: string, handler: (event: unknown, ctx: unknown) => unknown) => { hooks.set(name, handler); return () => undefined; },
     before: (name: string, handler: (input: unknown, ctx: unknown) => unknown) => { befores.set(name, handler); return () => undefined; },
     registerSettings: () => ({
-      read: async () => ({ status: "ready", revision: "r1", values: { run: options.autoRun === true, send: options.autoSend === true } }),
+      read: async () => ({ status: "ready", revision: "r1", values: { run: options.autoRun === true, send: options.autoSend === true, own: options.autoOwn === true } }),
       subscribe: () => () => undefined,
     }),
     registerProvider: () => undefined,
@@ -617,12 +617,14 @@ test("Auto forward results on and Auto-run off: pressing Run on the card sends t
   await s.cleanup();
 });
 
-test("a command the user typed is not sent back, even with Auto forward results on", async () => {
-  const s = fakeServer({ autoRun: false, autoSend: true });
-  await s.handlers.get("shell-yeah.start")!({ agentId: "agent-9", cwd: nowhere(), command: "echo mine", origin: "user" }, s.ctx);
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  assert.deepEqual(s.sentToAgent, []);
-  await s.cleanup();
+test("a command the user typed is sent back only when Forward my own commands is on, whatever Auto forward results says", async () => {
+  for (const [autoSend, autoOwn, expected] of [[true, false, 0], [false, true, 1], [true, true, 1], [false, false, 0]] as const) {
+    const s = fakeServer({ autoRun: false, autoSend, autoOwn });
+    await s.handlers.get("shell-yeah.start")!({ agentId: "agent-9", cwd: nowhere(), command: "echo mine", origin: "user" }, s.ctx);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(s.sentToAgent.length, expected, `send=${autoSend} own=${autoOwn}`);
+    await s.cleanup();
+  }
 });
 
 test("Auto-run on and Auto forward results off: it runs, and nothing goes to the agent", async () => {
