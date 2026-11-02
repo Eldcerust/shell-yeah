@@ -40,8 +40,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test \"*/*.test.ts\" \"*.test.ts\"",
-    "dev": "node ../scripts/dev.mjs",
-    "check:install": "node ../scripts/check-install.mjs"
+    "dev": "node scripts/dev.mjs",
+    "check:install": "node scripts/check-install.mjs"
   },
   "devDependencies": {
     "@getpaseo/client": "0.13.0",
