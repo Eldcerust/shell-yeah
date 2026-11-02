@@ -2,7 +2,6 @@ import type { PluginButtonRegistration, PluginClientContext } from "@getpaseo/pl
 import { observeDirectory, type PaseoAgentUpdate } from "./client/directory.ts";
 import { RunRowView } from "./client/run-row.tsx";
 import { RunWindow } from "./client/run-window.tsx";
-import { ShellYeahSettings } from "./client/settings.tsx";
 import { commandOutputSource, scan, start } from "./shared/rpc.ts";
 import { RUN_KIND, RUN_VERSION, runRow } from "./shared/row.ts";
 import { errorMessage, shortCommand } from "./shared/text.ts";
@@ -36,7 +35,6 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addTimelineRenderer({ kind: RUN_KIND, version: RUN_VERSION, schema: runRow, Component: RunRowView }),
     client.addAttachmentSource(commandOutputSource),
-    client.addSettingsScreen({ id: "settings", title: "Settings", icon: "SquareTerminal", Component: ShellYeahSettings }),
   ];
   const stopPills = addRunPills(client);
   return () => {
