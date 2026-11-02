@@ -1,10 +1,12 @@
 import type { PluginHandlerContext, PluginServerContext } from "@getpaseo/plugin/server";
 import { agentOf, attachItems, fetchTurn, latestAssistantText, proposeFromReply, scanProposals, sendToClaude, sendVia, withHandoffPrompt, type AttachDeps } from "./server/claude.ts";
 import { createLogStore, defaultLogRoot } from "./server/logs.ts";
+import { autoRun } from "./server/autorun.ts";
 import { createRunRegistry } from "./server/runs.ts";
 import { commandFinder } from "./server/shells.ts";
 import { attachSearch, dismiss, fullOutput, input, scan, send, start, stop, suggest, tail } from "./shared/rpc.ts";
-import { RUN_KIND, RUN_VERSION, cardIdOf } from "./shared/row.ts";
+import { RUN_KIND, RUN_VERSION, cardIdOf, type RunRow } from "./shared/row.ts";
+import { autoRunSettings } from "./shared/settings.ts";
 
 export default function contribute(server: PluginServerContext) {
   // `paseo` exists only inside handler and hook contexts; every one of them hands over the
@@ -20,6 +22,11 @@ export default function contribute(server: PluginServerContext) {
     now: Date.now,
     env: process.env,
   });
+  const autoRunSetting = server.registerSettings(autoRunSettings);
+  const autoRunEnabled = async () => {
+    const state = await autoRunSetting.read();
+    return state.status === "ready" && state.values.enabled;
+  };
   const sendCounts = new Map<string, number>();
   const logs = createLogStore({ root: defaultLogRoot() });
   const saved: AttachDeps["saved"] = new Map();
@@ -71,7 +78,11 @@ export default function contribute(server: PluginServerContext) {
     const ref = ctx.paseo.agents.ref(event.agent.id);
     const turn = await fetchTurn((options) => ref.timeline.refetch(options), event.turnId).catch(() => null);
     if (!turn) return;
-    await proposeFromReply({ registry: runs, agentId: event.agent.id, cwd: event.agent.cwd, turn, mode: "marked" });
+    const proposed: RunRow[] = [];
+    await proposeFromReply({ registry: runs, agentId: event.agent.id, cwd: event.agent.cwd, turn, mode: "marked", onProposed: (row) => proposed.push(row) });
+    // With Run commands automatically on, the cards just added start themselves. Not awaited:
+    // a long command must not hold the hook, and the cards already show what is happening.
+    if (proposed.length > 0) void autoRun({ registry: runs, enabled: autoRunEnabled }, event.agent.id, proposed).catch(() => undefined);
   });
 
   // An archived chat is done with: its saved logs go with it. Archiving a workspace archives its chats.

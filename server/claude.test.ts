@@ -368,7 +368,7 @@ test("a long run in the attach menu saves its full log once per revision, from e
 type Entry = { item: Record<string, unknown>; turnId?: string };
 type Cursor = { epoch: string; seq: number };
 
-function fakeServer() {
+function fakeServer(options: { autoRun?: boolean } = {}) {
   const appended: Array<{ agentId: string; id: string; data: RunRow }> = [];
   const fetches: Array<{ direction: string; limit: number | undefined }> = [];
   const handlers = new Map<string, (input: unknown, ctx: unknown) => unknown>();
@@ -413,7 +413,10 @@ function fakeServer() {
     handle: (contract: { name: string }, handler: (input: unknown, ctx: unknown) => unknown) => { handlers.set(contract.name, handler); },
     on: (name: string, handler: (event: unknown, ctx: unknown) => unknown) => { hooks.set(name, handler); return () => undefined; },
     before: (name: string, handler: (input: unknown, ctx: unknown) => unknown) => { befores.set(name, handler); return () => undefined; },
-    registerSettings: () => { throw new Error("unused"); },
+    registerSettings: () => ({
+      read: async () => ({ status: "ready", revision: "r1", values: { enabled: options.autoRun === true } }),
+      subscribe: () => () => undefined,
+    }),
     registerProvider: () => undefined,
     registerUsageSource: () => undefined,
   } as unknown as PluginServerContext;
@@ -560,5 +563,35 @@ test("archiving a chat deletes the logs saved for it", async () => {
   assert.equal(existsSync(gone), false);
   assert.equal(existsSync(kept), true);
   assert.deepEqual(readdirSync(defaultLogRoot()), ["agent-2"]);
+  await s.cleanup();
+});
+
+// A folder that does not exist: a started run fails before any process launches, so these
+// tests prove a command was started without running anything.
+const nowhere = () => join(tmpdir(), `shell-yeah-no-such-folder-${Math.random().toString(36).slice(2)}`);
+
+async function until(check: () => boolean) {
+  for (let waited = 0; waited < 2000 && !check(); waited += 10) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(check(), "timed out waiting");
+}
+
+test("with Run commands automatically on, a reply's command starts itself and its card turns into a run", async () => {
+  const s = fakeServer({ autoRun: true });
+  s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
+  await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
+  await until(() => s.appended.some((row) => row.data.phase.kind === "failed"));
+  assert.equal(s.appended[0].data.phase.kind, "proposed", "the card is shown first");
+  const run = s.appended.find((row) => row.data.phase.kind === "failed")!;
+  assert.equal(run.id, s.appended[0].id, "the same card, replaced in place");
+  assert.equal(run.data.origin, "claude");
+  await s.cleanup();
+});
+
+test("with Run commands automatically off, the same reply leaves its card waiting for the Run button", async () => {
+  const s = fakeServer({ autoRun: false });
+  s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
+  await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.deepEqual(s.appended.map((row) => row.data.phase.kind), ["proposed"]);
   await s.cleanup();
 });
