@@ -1,0 +1,25 @@
+name: Checks
+
+# The same checks the upstream sync runs before it merges: if these fail on a plain push, the sync
+# would refuse every merge, so a failure here is worth knowing about first.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: node --test scripts/sync-upstream.test.mjs
