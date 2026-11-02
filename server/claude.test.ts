@@ -603,6 +603,28 @@ test("with Auto forward results on too, the finished command's output goes to th
   await s.cleanup();
 });
 
+test("Auto forward results on and Auto-run off: pressing Run on the card sends the result when it ends", async () => {
+  const s = fakeServer({ autoRun: false, autoSend: true });
+  s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
+  const cwd = nowhere();
+  await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(s.sentToAgent.length, 0, "the card waits: nothing started it");
+  const card = s.appended[0].data;
+  await s.handlers.get("shell-yeah.start")!({ agentId: "agent-9", cwd, command: card.command, origin: "claude", runId: card.runId }, s.ctx);
+  await until(() => s.sentToAgent.length > 0);
+  assert.equal(s.sentToAgent.length, 1);
+  await s.cleanup();
+});
+
+test("a command the user typed is not sent back, even with Auto forward results on", async () => {
+  const s = fakeServer({ autoRun: false, autoSend: true });
+  await s.handlers.get("shell-yeah.start")!({ agentId: "agent-9", cwd: nowhere(), command: "echo mine", origin: "user" }, s.ctx);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.deepEqual(s.sentToAgent, []);
+  await s.cleanup();
+});
+
 test("Auto-run on and Auto forward results off: it runs, and nothing goes to the agent", async () => {
   const s = fakeServer({ autoRun: true, autoSend: false });
   s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });

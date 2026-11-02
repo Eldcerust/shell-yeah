@@ -25,11 +25,8 @@ export interface AutoRunDeps {
   registry: Pick<RunRegistry, "start" | "tail">;
   // Asked before each command, so turning the setting off stops the ones still waiting.
   enabled(): Promise<boolean>;
-  // Asked once the commands are done: whether their results go back to the agent.
-  sends(): Promise<boolean>;
-  // What the Send button does for one run. Rejects when the agent can't take it now.
-  send(runId: string): Promise<unknown>;
   budget: AutoRunBudget;
+  log?(message: string): void;
 }
 
 // The phase a run ends in, or null when the daemon no longer knows the run.
@@ -51,33 +48,22 @@ export async function untilEnded(registry: Pick<RunRegistry, "tail">, runId: str
 // card would. Order matters (a build, then a deploy), so a command waits for the one before it,
 // and the chain stops at the first that doesn't finish cleanly. The commands left over stay as
 // cards with a Run button, and so does one that can't start (too many running, the chat isn't
-// loaded) or that would pass the hour's limit.
-//
-// Results go back only when the whole chain is done, in order, each as the Send button would
-// send it. A failure goes too, since it is what the agent needs. A command the user stopped
-// doesn't: stopping is saying "not this". If the agent can't take a result now (it is waiting
-// on a permission), the rest stay unsent and the card's Send button is still there.
+// loaded) or that would pass the hour's limit. Sending results back is not done here: that
+// happens when any of the agent's commands ends (forward.ts), however it was started.
 export async function autoRun(deps: AutoRunDeps, agentId: string, rows: readonly RunRow[]): Promise<void> {
-  const finished: string[] = [];
+  const log = deps.log ?? (() => undefined);
   for (const row of rows) {
     if (row.origin !== "claude" || row.phase.kind !== "proposed") continue;
-    if (!(await deps.enabled())) break;
-    if (!deps.budget.take(agentId)) break;
+    if (!(await deps.enabled())) return log(`auto-run ${row.runId}: not started, the setting is off`);
+    if (!deps.budget.take(agentId)) return log(`auto-run ${row.runId}: not started, ${LIMITS.autoRunsPerHour} an hour reached for this chat`);
     try {
       await deps.registry.start({ agentId, cwd: row.cwd, command: row.command, origin: "claude", runId: row.runId });
-    } catch {
-      break;
+    } catch (error) {
+      return log(`auto-run ${row.runId}: could not start: ${error instanceof Error ? error.message : String(error)}`);
     }
+    log(`auto-run ${row.runId}: started`);
     const ended = await untilEnded(deps.registry, row.runId);
-    if (ended?.kind === "ok" || ended?.kind === "failed") finished.push(row.runId);
-    if (ended?.kind !== "ok") break;
-  }
-  if (finished.length === 0 || !(await deps.sends())) return;
-  for (const runId of finished) {
-    try {
-      await deps.send(runId);
-    } catch {
-      return;
-    }
+    log(`auto-run ${row.runId}: ${ended?.kind ?? "lost track of it"}`);
+    if (ended?.kind !== "ok") return;
   }
 }

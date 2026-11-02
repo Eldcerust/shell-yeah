@@ -2,6 +2,7 @@ import type { PluginHandlerContext, PluginServerContext } from "@getpaseo/plugin
 import { agentOf, attachItems, fetchTurn, latestAssistantText, proposeFromReply, scanProposals, sendToClaude, sendVia, withHandoffPrompt, type AttachDeps } from "./server/claude.ts";
 import { createLogStore, defaultLogRoot } from "./server/logs.ts";
 import { autoRun, createAutoRunBudget } from "./server/autorun.ts";
+import { forwardResult } from "./server/forward.ts";
 import { createRunRegistry } from "./server/runs.ts";
 import { commandFinder } from "./server/shells.ts";
 import { attachSearch, dismiss, fullOutput, input, scan, send, start, stop, suggest, tail } from "./shared/rpc.ts";
@@ -21,6 +22,8 @@ export default function contribute(server: PluginServerContext) {
     },
     now: Date.now,
     env: process.env,
+    // With Auto forward results on, a command the agent handed over sends its result when it ends.
+    onEnded: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
   });
   const autoRunSetting = server.registerSettings(autoRunSettings);
   // An unreadable setting counts as off: nothing starts or sends on a guess.
@@ -29,6 +32,16 @@ export default function contribute(server: PluginServerContext) {
     return state.status === "ready" && state.values[name];
   };
   const autoBudget = createAutoRunBudget(Date.now);
+  const log = (message: string) => console.log(`[shell-yeah] ${message}`);
+  const forwardDeps = {
+    enabled: () => autoSetting("send"),
+    send: (agentId: string, runId: string) => {
+      if (!paseo) throw new Error("Paseo isn't connected yet.");
+      return sendToClaude({ runs, logs, agent: agentOf(paseo), send: sendVia(paseo), sendCounts }, { agentId, runId });
+    },
+    wait: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+    log,
+  };
   const sendCounts = new Map<string, number>();
   const logs = createLogStore({ root: defaultLogRoot() });
   const saved: AttachDeps["saved"] = new Map();
@@ -82,22 +95,10 @@ export default function contribute(server: PluginServerContext) {
     if (!turn) return;
     const proposed: RunRow[] = [];
     await proposeFromReply({ registry: runs, agentId: event.agent.id, cwd: event.agent.cwd, turn, mode: "marked", onProposed: (row) => proposed.push(row) });
-    // With Auto-run on, the cards just added start themselves, and with
-    // Auto forward results on, their output goes back to the agent when they are done. Not awaited:
-    // a long command must not hold the hook, and the cards already show what is happening.
+    // With Auto-run on, the cards just added start themselves. Not awaited: a long command must
+    // not hold the hook, and the cards already show what is happening.
     if (proposed.length > 0) {
-      const deps = { runs, logs, agent: agentOf(ctx.paseo), send: sendVia(ctx.paseo), sendCounts };
-      void autoRun(
-        {
-          registry: runs,
-          enabled: () => autoSetting("run"),
-          sends: () => autoSetting("send"),
-          send: (runId) => sendToClaude(deps, { agentId: event.agent.id, runId }),
-          budget: autoBudget,
-        },
-        event.agent.id,
-        proposed,
-      ).catch(() => undefined);
+      void autoRun({ registry: runs, enabled: () => autoSetting("run"), budget: autoBudget, log }, event.agent.id, proposed).catch(() => undefined);
     }
   });
 
