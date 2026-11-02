@@ -2,7 +2,7 @@
 
 # Shell Yeah
 
-> A fork of [Shell Yeah](https://github.com/stevecastaneda/paseo-plugins/tree/main/shell-yeah) by Steve Castaneda (MIT), with two extra switches in the Run window: **Auto-run** and **Auto forward results**. See [Running commands automatically](#running-commands-automatically).
+> A fork of [Shell Yeah](https://github.com/stevecastaneda/paseo-plugins/tree/main/shell-yeah) by Steve Castaneda (MIT), with two extra switches in the Run window: **Auto-run** and **Auto forward results**. See [Running commands automatically](#running-commands-automatically) and [FORK.md](FORK.md), which also covers how it stays in sync with the original.
 
 A plugin for Paseo 0.13 and later. Type `/sh` and a command in the message box to run it yourself, in the agent's folder, with live output in the chat. The agent sees the output only if you send it.
 
@@ -120,10 +120,6 @@ paseo plugin add npm:@stevecastaneda/paseo-shell-yeah
 Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.js 22.18 or later on the daemon host.
 
 ## Changelog
-
-### 1.4.0
-
-- [New] **Auto-run** and **Auto forward results.** Two switches in the Run window, both off by default. The first starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. The second sends their output back to the agent when they are done. At most 20 commands start this way per chat in an hour.
 
 ### 1.3.1
 

@@ -1,0 +1,65 @@
+name: Sync with upstream Shell Yeah
+
+# Merges new commits from the original Shell Yeah (a folder in stevecastaneda/paseo-plugins) into
+# main, once a day, when they merge cleanly and the checks pass. Anything else opens an issue.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Merge the original Shell Yeah
+        id: sync
+        env:
+          SYNC_PUSH: "1"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set +e
+          node scripts/sync-upstream.mjs 2>&1 | tee sync.log
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Open an issue when a person is needed
+        if: steps.sync.outputs.code == '2' || steps.sync.outputs.code == '3' || steps.sync.outputs.code == '4'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream sync needs attention"
+          {
+            echo "The daily sync with the original Shell Yeah could not finish by itself."
+            echo
+            echo '```'
+            tail -n 25 sync.log
+            echo '```'
+            echo
+            echo "Run \`node scripts/sync-upstream.mjs\` in a clone to try it by hand (see FORK.md), or open the [run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+          } > body.md
+          open=$(gh issue list --state open --search "in:title $title" --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
+
+      - name: Fail the run when the sync did not finish
+        if: steps.sync.outputs.code != '0'
+        run: exit 1
