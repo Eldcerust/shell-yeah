@@ -35,7 +35,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           set +e
-          node scripts/sync-upstream.mjs 2>&1 | tee sync.log
+          # The log goes outside the checkout: the script refuses to run over uncommitted files.
+          node scripts/sync-upstream.mjs 2>&1 | tee "$RUNNER_TEMP/sync.log"
           echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Open an issue when a person is needed
@@ -48,16 +49,16 @@ jobs:
             echo "The daily sync with the original Shell Yeah could not finish by itself."
             echo
             echo '```'
-            tail -n 25 sync.log
+            tail -n 25 "$RUNNER_TEMP/sync.log"
             echo '```'
             echo
             echo "Run \`node scripts/sync-upstream.mjs\` in a clone to try it by hand (see FORK.md), or open the [run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
-          } > body.md
+          } > "$RUNNER_TEMP/body.md"
           open=$(gh issue list --state open --search "in:title $title" --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then
-            gh issue comment "$open" --body-file body.md
+            gh issue comment "$open" --body-file "$RUNNER_TEMP/body.md"
           else
-            gh issue create --title "$title" --body-file body.md
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
           fi
 
       - name: Fail the run when the sync did not finish
