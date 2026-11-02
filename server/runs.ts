@@ -14,6 +14,8 @@ export interface RunsDeps {
   limits?: Partial<Limits>;
   // "auto" runs commands in a real terminal when this machine can; "off" never does.
   terminal?: "auto" | "off";
+  // Called once when a run ends, in any way, with its row as the daemon sees it then.
+  onEnded?(agentId: string, row: RunRow): void;
 }
 
 export interface StartInput {
@@ -221,6 +223,16 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
     run.timers = [];
     bump(run);
     publishRun(run, true).catch(() => undefined);
+    if (isEnded(next)) announceEnd(run);
+  }
+
+  function announceEnd(run: Run) {
+    // The state machine must not depend on whoever is listening.
+    try {
+      deps.onEnded?.(run.agentId, rowOf(run, limits.scrollbackLines));
+    } catch {
+      // A failing listener is its own problem.
+    }
   }
 
   function settle(run: Run, code: number | null, signal: NodeJS.Signals | null) {
@@ -358,6 +370,8 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
         throw error;
       }
       if (run.phase.kind === "running") launch(run, spawner);
+      // A command that could not start (no such folder) is already over, and never reaches `transition`.
+      else announceEnd(run);
       evict();
       return { runId: id };
     },

@@ -235,7 +235,8 @@ test("the Run window says what its two switches mean together, and warns when no
   assert.match(autoCaption(true, false, 20).text, /Results wait for Send/);
   assert.equal(autoCaption(true, true, 20).tone, "warning");
   assert.match(autoCaption(true, true, 20).text, /no one watching\. Max 20 per chat an hour/);
-  // Sending alone does nothing, and the caption says so instead of implying it works.
-  assert.equal(autoCaption(false, true, 20).tone, "muted");
-  assert.match(autoCaption(false, true, 20).text, /nothing happens while Auto-run is off/);
+  // Forwarding alone works for commands you run from the agent's cards, and the caption says it
+  // sends output away, so it is a warning too.
+  assert.equal(autoCaption(false, true, 20).tone, "warning");
+  assert.match(autoCaption(false, true, 20).text, /go back to it when they finish/);
 });

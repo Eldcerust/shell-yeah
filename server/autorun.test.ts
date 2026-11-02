@@ -21,8 +21,6 @@ const view = (rev: number, phase: Phase): TailResult => ({
 
 interface Options {
   run?: () => Promise<boolean>;
-  sends?: () => Promise<boolean>;
-  sendError?: Error;
   startError?: (input: StartInput) => Error | undefined;
   takes?: (agentId: string) => boolean;
 }
@@ -30,15 +28,13 @@ interface Options {
 // A registry where each run takes the phases given for it, one per tail call, and then stays in the last.
 function fake(script: Record<string, TailResult[]>, options: Options = {}) {
   const started: string[] = [];
-  const sent: string[] = [];
-  const events: string[] = [];
+  const logged: string[] = [];
   const calls: Record<string, number> = {};
   const registry: Pick<RunRegistry, "start" | "tail"> = {
     async start(input) {
       const error = options.startError?.(input);
       if (error) throw error;
       started.push(input.command);
-      events.push(`start ${input.command}`);
       assert.equal(input.origin, "claude");
       return { runId: input.runId! };
     },
@@ -52,15 +48,10 @@ function fake(script: Record<string, TailResult[]>, options: Options = {}) {
   const deps: AutoRunDeps = {
     registry,
     enabled: options.run ?? (async () => true),
-    sends: options.sends ?? (async () => false),
-    send: async (runId) => {
-      if (options.sendError) throw options.sendError;
-      sent.push(runId);
-      events.push(`send ${runId}`);
-    },
     budget: { take: (agentId) => options.takes?.(agentId) ?? true },
+    log: (message) => logged.push(message),
   };
-  return { deps, started, sent, events };
+  return { deps, started, logged };
 }
 
 test("nothing starts while the setting is off", async () => {
@@ -110,43 +101,6 @@ test("a run the daemon no longer knows ends the chain", async () => {
   assert.deepEqual(started, ["one"]);
 });
 
-test("results go back in order once every command is done, not while the chain is still running", async () => {
-  const { deps, events } = fake({ r1: [view(1, ok)], r2: [view(1, ok)] }, { sends: async () => true });
-  await autoRun(deps, "a", [proposal("r1", "build"), proposal("r2", "deploy")]);
-  assert.deepEqual(events, ["start build", "start deploy", "send r1", "send r2"]);
-});
-
-test("nothing is sent while that setting is off", async () => {
-  const { deps, sent } = fake({ r1: [view(1, ok)] }, { sends: async () => false });
-  await autoRun(deps, "a", [proposal("r1", "build")]);
-  assert.deepEqual(sent, []);
-});
-
-test("a failure is sent too, and the commands after it are not started", async () => {
-  const { deps, started, sent } = fake({ r1: [view(1, ok)], r2: [view(1, failed)], r3: [view(1, ok)] }, { sends: async () => true });
-  await autoRun(deps, "a", [proposal("r1", "one"), proposal("r2", "two"), proposal("r3", "three")]);
-  assert.deepEqual(started, ["one", "two"]);
-  assert.deepEqual(sent, ["r1", "r2"]);
-});
-
-test("a command the user stopped is not sent", async () => {
-  const { deps, sent } = fake({ r1: [view(1, stopped)] }, { sends: async () => true });
-  await autoRun(deps, "a", [proposal("r1", "long job")]);
-  assert.deepEqual(sent, []);
-});
-
-test("an agent that cannot take the result now leaves it unsent, without throwing", async () => {
-  const { deps, sent } = fake({ r1: [view(1, ok)], r2: [view(1, ok)] }, { sends: async () => true, sendError: new Error("Claude is waiting for you to approve something.") });
-  await autoRun(deps, "a", [proposal("r1", "one"), proposal("r2", "two")]);
-  assert.deepEqual(sent, []);
-});
-
-test("nothing is sent when no command started", async () => {
-  const { deps, sent } = fake({}, { run: async () => false, sends: async () => true });
-  await autoRun(deps, "a", [proposal("r1", "one")]);
-  assert.deepEqual(sent, []);
-});
-
 test("a chat past its hourly limit starts nothing more, and the card stays for the Run button", async () => {
   const taken: string[] = [];
   const { deps, started } = fake({ r1: [view(1, ok)] }, { takes: (agentId) => (taken.push(agentId), taken.length <= 1) });
@@ -163,6 +117,18 @@ test("the hourly limit counts each chat on its own and forgets what is more than
   assert.equal(budget.take("a"), false, "still inside the hour");
   now += 2 * 60_000;
   assert.equal(budget.take("a"), true, "the hour has passed");
+});
+
+test("every decision is logged, so a chain that quietly stops can be explained", async () => {
+  const { deps, logged } = fake({ r1: [view(1, ok)], r2: [view(1, failed)], r3: [view(1, ok)] });
+  await autoRun(deps, "a", [proposal("r1", "one"), proposal("r2", "two"), proposal("r3", "three")]);
+  assert.deepEqual(logged, ["auto-run r1: started", "auto-run r1: ok", "auto-run r2: started", "auto-run r2: failed"]);
+  const off = fake({}, { run: async () => false });
+  await autoRun(off.deps, "a", [proposal("r1", "one")]);
+  assert.match(off.logged[0], /the setting is off/);
+  const capped = fake({}, { takes: () => false });
+  await autoRun(capped.deps, "a", [proposal("r1", "one")]);
+  assert.match(capped.logged[0], /20 an hour reached/);
 });
 
 test("untilEnded follows the revision and returns the ending phase", async () => {

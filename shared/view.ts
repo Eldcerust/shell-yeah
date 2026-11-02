@@ -239,6 +239,6 @@ export function statusText(p: Presentation): string {
 export function autoCaption(run: boolean, send: boolean, limit: number): { text: string; tone: "muted" | "warning" } {
   if (run && send) return { text: `Runs and replies with no one watching. Max ${limit} per chat an hour.`, tone: "warning" };
   if (run) return { text: "Commands start on their own. Results wait for Send.", tone: "warning" };
-  if (send) return { text: "Only for auto-run commands, so nothing happens while Auto-run is off.", tone: "muted" };
+  if (send) return { text: "Results of the agent's commands go back to it when they finish.", tone: "warning" };
   return { text: "Off. Applies to every chat.", tone: "muted" };
 }
