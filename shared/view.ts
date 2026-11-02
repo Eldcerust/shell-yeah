@@ -237,8 +237,8 @@ export function statusText(p: Presentation): string {
 // is the one where nobody is watching: the agent can run a command, read the result and write
 // the next. `limit` is the hourly cap on automatic starts for a chat.
 export function autoCaption(run: boolean, send: boolean, limit: number): { text: string; tone: "muted" | "warning" } {
-  if (run && send) return { text: `The agent can run a command, read the result and carry on without you. At most ${limit} commands start this way per chat an hour.`, tone: "warning" };
-  if (run) return { text: "Commands from the agent start on their own, without asking. Results wait for you to press Send.", tone: "warning" };
-  if (send) return { text: "Results only go back for commands that start on their own, so this does nothing while Run automatically is off.", tone: "muted" };
-  return { text: "Off: you press Run on each command and Send for its result. Applies to every chat.", tone: "muted" };
+  if (run && send) return { text: `Runs and replies with no one watching. Max ${limit} per chat an hour.`, tone: "warning" };
+  if (run) return { text: "Commands start on their own. Results wait for Send.", tone: "warning" };
+  if (send) return { text: "Only for auto-run commands, so nothing happens while Auto-run is off.", tone: "muted" };
+  return { text: "Off. Applies to every chat.", tone: "muted" };
 }

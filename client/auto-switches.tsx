@@ -33,8 +33,8 @@ export function AutoSwitches({ colors, compact }: { colors: ThemeColors; compact
   const save = (next: { run: boolean; send: boolean }) => void settings.save(next, settings.revision);
   return (
     <View style={divider}>
-      <Row label="Run commands automatically" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value, send })} />
-      <Row label="Send the result to the agent" value={send} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run, send: value })} />
+      <Row label="Auto-run" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value, send })} />
+      <Row label="Auto forward results" value={send} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run, send: value })} />
       <Text style={{ ...muted, color: caption.tone === "warning" ? colors.statusWarning : colors.foregroundMuted }}>{caption.text}</Text>
       {settings.saveError ? <Text style={{ ...muted, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
     </View>

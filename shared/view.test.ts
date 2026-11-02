@@ -230,12 +230,12 @@ test("an earlier run shows as its own status and output, with Rerun, Copy and Se
 
 test("the Run window says what its two switches mean together, and warns when nobody is watching", () => {
   assert.deepEqual(autoCaption(false, false, 20).tone, "muted");
-  assert.match(autoCaption(false, false, 20).text, /you press Run on each command/);
+  assert.match(autoCaption(false, false, 20).text, /^Off\./);
   assert.equal(autoCaption(true, false, 20).tone, "warning");
-  assert.match(autoCaption(true, false, 20).text, /Results wait for you/);
+  assert.match(autoCaption(true, false, 20).text, /Results wait for Send/);
   assert.equal(autoCaption(true, true, 20).tone, "warning");
-  assert.match(autoCaption(true, true, 20).text, /without you\. At most 20 commands/);
+  assert.match(autoCaption(true, true, 20).text, /no one watching\. Max 20 per chat an hour/);
   // Sending alone does nothing, and the caption says so instead of implying it works.
   assert.equal(autoCaption(false, true, 20).tone, "muted");
-  assert.match(autoCaption(false, true, 20).text, /does nothing while Run automatically is off/);
+  assert.match(autoCaption(false, true, 20).text, /nothing happens while Auto-run is off/);
 });
