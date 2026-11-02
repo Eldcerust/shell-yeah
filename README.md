@@ -66,8 +66,8 @@ After **Run**, the card shows the output like any other run, and **Send to Claud
 
 By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Two switches at the bottom of the **Run** window (the Run pill in the message box) change that. Both are off by default and apply to every chat, and a change takes effect for the next reply. A line under them says what the current setting does.
 
-- **Run commands automatically.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
-- **Send the result to the agent.** When the commands started that way are done, their output goes back to the agent, as **Send** sends it, so it can carry on without you.
+- **Auto-run.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
+- **Auto forward results.** When the commands started that way are done, their output goes back to the agent, as **Send** sends it, so it can carry on without you.
 
 With both on, an agent can run a command, read the result and write the next command with nobody pressing anything.
 
@@ -121,7 +121,7 @@ Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.j
 
 ### 1.4.0
 
-- [New] **Run commands automatically** and **Send the result to the agent.** Two switches in the Run window, both off by default. The first starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. The second sends their output back to the agent when they are done. At most 20 commands start this way per chat in an hour.
+- [New] **Auto-run** and **Auto forward results.** Two switches in the Run window, both off by default. The first starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. The second sends their output back to the agent when they are done. At most 20 commands start this way per chat in an hour.
 
 ### 1.3.1
 

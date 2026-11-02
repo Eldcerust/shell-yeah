@@ -578,7 +578,7 @@ async function until(check: () => boolean) {
   assert.ok(check(), "timed out waiting");
 }
 
-test("with Run commands automatically on, a reply's command starts itself and its card turns into a run", async () => {
+test("with Auto-run on, a reply's command starts itself and its card turns into a run", async () => {
   const s = fakeServer({ autoRun: true });
   s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
   await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
@@ -590,7 +590,7 @@ test("with Run commands automatically on, a reply's command starts itself and it
   await s.cleanup();
 });
 
-test("with Send the result on too, the finished command's output goes to the agent the way the Send button sends it", async () => {
+test("with Auto forward results on too, the finished command's output goes to the agent the way the Send button sends it", async () => {
   const s = fakeServer({ autoRun: true, autoSend: true });
   s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
   await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
@@ -603,7 +603,7 @@ test("with Send the result on too, the finished command's output goes to the age
   await s.cleanup();
 });
 
-test("Run commands automatically on and Send the result off: it runs, and nothing goes to the agent", async () => {
+test("Auto-run on and Auto forward results off: it runs, and nothing goes to the agent", async () => {
   const s = fakeServer({ autoRun: true, autoSend: false });
   s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
   await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
@@ -613,7 +613,7 @@ test("Run commands automatically on and Send the result off: it runs, and nothin
   await s.cleanup();
 });
 
-test("with Run commands automatically off, the same reply leaves its card waiting for the Run button", async () => {
+test("with Auto-run off, the same reply leaves its card waiting for the Run button", async () => {
   const s = fakeServer({ autoRun: false });
   s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
   await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);

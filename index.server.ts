@@ -82,8 +82,8 @@ export default function contribute(server: PluginServerContext) {
     if (!turn) return;
     const proposed: RunRow[] = [];
     await proposeFromReply({ registry: runs, agentId: event.agent.id, cwd: event.agent.cwd, turn, mode: "marked", onProposed: (row) => proposed.push(row) });
-    // With Run commands automatically on, the cards just added start themselves, and with
-    // Send the result on, their output goes back to the agent when they are done. Not awaited:
+    // With Auto-run on, the cards just added start themselves, and with
+    // Auto forward results on, their output goes back to the agent when they are done. Not awaited:
     // a long command must not hold the hook, and the cards already show what is happening.
     if (proposed.length > 0) {
       const deps = { runs, logs, agent: agentOf(ctx.paseo), send: sendVia(ctx.paseo), sendCounts };
