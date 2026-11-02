@@ -2,6 +2,8 @@
 
 # Shell Yeah
 
+> A fork of [Shell Yeah](https://github.com/stevecastaneda/paseo-plugins/tree/main/shell-yeah) by Steve Castaneda (MIT), with two extra switches in the Run window: **Auto-run** and **Auto forward results**. See [Running commands automatically](#running-commands-automatically).
+
 A plugin for Paseo 0.13 and later. Type `/sh` and a command in the message box to run it yourself, in the agent's folder, with live output in the chat. The agent sees the output only if you send it.
 
 It's the Paseo version of Claude Code's `!` mode. It's also how an agent hands you a command it can't run itself: a login that needs your browser, a deploy behind your VPN, a publish that needs your 2FA code. The command shows up under the agent's reply with a **Run** button.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { clientHarness } from "../../test-support/client-harness.mjs";
+import { clientHarness } from "../test-support/client-harness.mjs";
 import type { LiveView, RunRow } from "../shared/row.ts";
 import type { LiveStore } from "./live.ts";
 
