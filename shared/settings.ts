@@ -1,11 +1,17 @@
 import { defineSettings } from "@getpaseo/plugin";
 import { z } from "zod";
 
-// Off until the user turns it on: with it on, a reply from an agent starts a command on
-// this computer, as the user, without a click. Host-scoped, so it applies to every chat.
+// Both off until the user turns them on. With `run` on, a reply from an agent starts a command
+// on this computer, as the user, without a click; with `send` on, the result goes back to the
+// agent without a click, which can start its next turn. Host-scoped, so they apply to every chat.
 export const autoRunSettings = defineSettings({
   id: "auto-run",
   scope: "host",
   version: 1,
-  schema: z.object({ enabled: z.boolean().default(false) }),
+  schema: z.object({
+    // Start the commands an agent hands over as soon as its reply ends.
+    run: z.boolean().default(false),
+    // Send the output of a command started that way back to the agent when it finishes.
+    send: z.boolean().default(false),
+  }),
 });

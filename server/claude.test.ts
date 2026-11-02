@@ -368,8 +368,9 @@ test("a long run in the attach menu saves its full log once per revision, from e
 type Entry = { item: Record<string, unknown>; turnId?: string };
 type Cursor = { epoch: string; seq: number };
 
-function fakeServer(options: { autoRun?: boolean } = {}) {
+function fakeServer(options: { autoRun?: boolean; autoSend?: boolean } = {}) {
   const appended: Array<{ agentId: string; id: string; data: RunRow }> = [];
+  const sentToAgent: Array<{ agentId: string; text: string; opts: Record<string, unknown> }> = [];
   const fetches: Array<{ direction: string; limit: number | undefined }> = [];
   const handlers = new Map<string, (input: unknown, ctx: unknown) => unknown>();
   const hooks = new Map<string, (event: unknown, ctx: unknown) => unknown>();
@@ -384,6 +385,8 @@ function fakeServer(options: { autoRun?: boolean } = {}) {
         cwd: "/w",
         status: "idle",
         pendingPermissions: [],
+        refresh: async () => undefined,
+        send: async (text: string, opts: Record<string, unknown>) => { sentToAgent.push({ agentId, text, opts }); },
         timeline: {
           append: async (item: { id: string; data: RunRow }) => {
             appended.push({ agentId, id: item.id, data: item.data });
@@ -414,7 +417,7 @@ function fakeServer(options: { autoRun?: boolean } = {}) {
     on: (name: string, handler: (event: unknown, ctx: unknown) => unknown) => { hooks.set(name, handler); return () => undefined; },
     before: (name: string, handler: (input: unknown, ctx: unknown) => unknown) => { befores.set(name, handler); return () => undefined; },
     registerSettings: () => ({
-      read: async () => ({ status: "ready", revision: "r1", values: { enabled: options.autoRun === true } }),
+      read: async () => ({ status: "ready", revision: "r1", values: { run: options.autoRun === true, send: options.autoSend === true } }),
       subscribe: () => () => undefined,
     }),
     registerProvider: () => undefined,
@@ -423,7 +426,7 @@ function fakeServer(options: { autoRun?: boolean } = {}) {
   const cleanup = contribute(server);
   const ctx = { paseo, signal: new AbortController().signal };
   return {
-    appended, fetches, ctx, cleanup, handlers, hooks, befores,
+    appended, sentToAgent, fetches, ctx, cleanup, handlers, hooks, befores,
     loadProviderHistory: (items: unknown[]) => { history = items.map((item) => ({ item: item as Entry["item"] })); },
     history: () => history.map((e) => e.item),
     record: (turnId: string, ...items: unknown[]) => { history.push(...items.map((item) => ({ item: item as Entry["item"], turnId }))); },
@@ -584,6 +587,29 @@ test("with Run commands automatically on, a reply's command starts itself and it
   const run = s.appended.find((row) => row.data.phase.kind === "failed")!;
   assert.equal(run.id, s.appended[0].id, "the same card, replaced in place");
   assert.equal(run.data.origin, "claude");
+  await s.cleanup();
+});
+
+test("with Send the result on too, the finished command's output goes to the agent the way the Send button sends it", async () => {
+  const s = fakeServer({ autoRun: true, autoSend: true });
+  s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
+  await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
+  await until(() => s.sentToAgent.length > 0);
+  assert.equal(s.sentToAgent.length, 1);
+  assert.equal(s.sentToAgent[0].agentId, "agent-9");
+  const attachments = s.sentToAgent[0].opts.attachments as Array<{ text: string }>;
+  assert.match(attachments[0].text, /<bash-input>npm publish<\/bash-input>/);
+  assert.match(String(s.sentToAgent[0].opts.messageId), /^shell-yeah:/);
+  await s.cleanup();
+});
+
+test("Run commands automatically on and Send the result off: it runs, and nothing goes to the agent", async () => {
+  const s = fakeServer({ autoRun: true, autoSend: false });
+  s.record("t1", { type: "user_message", text: "ship" }, { type: "assistant_message", text: fence("sh run", "npm publish") });
+  await s.hooks.get("agent.turn_ended")!({ agent: { id: "agent-9", cwd: nowhere() }, turnId: "t1", outcome: { kind: "completed" }, timeline: [] }, s.ctx);
+  await until(() => s.appended.some((row) => row.data.phase.kind === "failed"));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.deepEqual(s.sentToAgent, []);
   await s.cleanup();
 });
 
