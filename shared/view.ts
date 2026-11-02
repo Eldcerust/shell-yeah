@@ -236,9 +236,12 @@ export function statusText(p: Presentation): string {
 // What the Run window's two switches mean together, in one line under them. The warning case
 // is the one where nobody is watching: the agent can run a command, read the result and write
 // the next. `limit` is the hourly cap on automatic starts for a chat.
-export function autoCaption(run: boolean, send: boolean, limit: number): { text: string; tone: "muted" | "warning" } {
-  if (run && send) return { text: `Runs and replies with no one watching. Max ${limit} per chat an hour.`, tone: "warning" };
-  if (run) return { text: "Commands start on their own. Results wait for Send.", tone: "warning" };
-  if (send) return { text: "Results of the agent's commands go back to it when they finish.", tone: "warning" };
-  return { text: "Off. Applies to every chat.", tone: "muted" };
+export function autoCaption(run: boolean, send: boolean, own: boolean, limit: number): { text: string; tone: "muted" | "warning" } {
+  if (!run && !send && !own) return { text: "Off. Applies to every chat.", tone: "muted" };
+  const parts: string[] = [];
+  if (run) parts.push("Agent commands start on their own.");
+  if (send) parts.push(run ? "Their results go back." : "Results of the agent's commands go back.");
+  if (own) parts.push("Your own commands' results go back to the agent.");
+  if (run && send) parts.push(`No one is watching. Max ${limit} per chat an hour.`);
+  return { text: parts.join(" "), tone: "warning" };
 }

@@ -22,19 +22,20 @@ export default function contribute(server: PluginServerContext) {
     },
     now: Date.now,
     env: process.env,
-    // With Auto forward results on, a command the agent handed over sends its result when it ends.
+    // With Auto forward results on, a command the agent handed over sends its result when it ends;
+    // with Forward my own commands on, so does one the user typed.
     onEnded: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
   });
   const autoRunSetting = server.registerSettings(autoRunSettings);
   // An unreadable setting counts as off: nothing starts or sends on a guess.
-  const autoSetting = async (name: "run" | "send") => {
+  const autoSetting = async (name: "run" | "send" | "own") => {
     const state = await autoRunSetting.read();
     return state.status === "ready" && state.values[name];
   };
   const autoBudget = createAutoRunBudget(Date.now);
   const log = (message: string) => console.log(`[shell-yeah] ${message}`);
   const forwardDeps = {
-    enabled: () => autoSetting("send"),
+    enabled: (origin: "claude" | "user") => autoSetting(origin === "user" ? "own" : "send"),
     send: (agentId: string, runId: string) => {
       if (!paseo) throw new Error("Paseo isn't connected yet.");
       return sendToClaude({ runs, logs, agent: agentOf(paseo), send: sendVia(paseo), sendCounts }, { agentId, runId });
