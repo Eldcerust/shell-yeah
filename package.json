@@ -6,10 +6,12 @@
   "author": "Steve Castaneda",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stevecastaneda/paseo-plugins.git",
-    "directory": "shell-yeah"
+    "url": "git+https://github.com/Eldcerust/shell-yeah.git"
   },
-  "homepage": "https://github.com/stevecastaneda/paseo-plugins/tree/main/shell-yeah#readme",
+  "homepage": "https://github.com/Eldcerust/shell-yeah#readme",
+  "bugs": {
+    "url": "https://github.com/Eldcerust/shell-yeah/issues"
+  },
   "keywords": [
     "paseo",
     "paseo-plugin",
