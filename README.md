@@ -62,6 +62,16 @@ When the reply ends, the plugin adds a card under it: the agent's comment as the
 
 After **Run**, the card shows the output like any other run, and **Send to Claude** is the main button.
 
+### Running commands automatically
+
+By default nothing an agent suggests runs until you press **Run**. If you trust the agent with it, turn on **Run commands automatically** under **Settings → Plugins → Shell Yeah → Commands from the agent**. The cards then start themselves as soon as the reply ends, as if you had pressed **Run** on each.
+
+- Several commands in one reply run one after another, each after the one before finished, and the chain stops at the first that fails or is stopped. The ones left over stay as cards with **Run**.
+- Turning the setting off stops the commands still waiting. A command already running keeps going; **Stop** it from its card.
+- Only the `sh run` blocks an agent wrote count, the same ones that get a card. **/sh**, the **Run** window and plain shell blocks are not started for you.
+- The commands run on this computer as you, with no confirmation, so a reply that quotes untrusted text could include one. Leave it off for agents you wouldn't give a shell.
+- A command that asks for a login or a code waits for you to type it in its card, as it does after pressing **Run**.
+
 <img src="images/5-ran.png" alt="The deploy card after pressing Run: the command finished and Send to Claude is ready" width="600">
 
 The card also warns you, in amber, when the command is hard to undo: when it runs as administrator (`sudo`), deletes files, throws away uncommitted changes, force-pushes, or runs a script downloaded from the internet. The plugin spots these by itself, in bash and in PowerShell, so the warning shows even when the agent didn't mention it. It catches the common forms, not every disguise, so still read the command.
@@ -101,6 +111,10 @@ paseo plugin add npm:@stevecastaneda/paseo-shell-yeah
 Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.js 22.18 or later on the daemon host.
 
 ## Changelog
+
+### 1.4.0
+
+- [New] **Run commands automatically.** A setting, off by default, that starts the commands an agent hands you as soon as its reply ends, one after another, stopping at the first that fails. It is under **Settings → Plugins → Shell Yeah**.
 
 ### 1.3.1
 

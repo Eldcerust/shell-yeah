@@ -231,6 +231,8 @@ export async function proposeFromReply(input: {
   cwd: string;
   turn: Turn;
   mode: ScanMode;
+  // Called with each card this reply newly added, in order, after it is published.
+  onProposed?: (row: RunRow) => void;
 }): Promise<{ found: number; proposed: number }> {
   const text = latestAssistantText(input.turn.timeline);
   const commands = scanProposals(text, input.mode);
@@ -239,7 +241,9 @@ export async function proposeFromReply(input: {
   let proposed = 0;
   for (const [index, command] of commands.entries()) {
     if (shown.has(command)) continue;
-    await input.registry.propose(input.agentId, proposalRow({ agentId: input.agentId, cwd: input.cwd, turnKey, index, command }));
+    const row = proposalRow({ agentId: input.agentId, cwd: input.cwd, turnKey, index, command });
+    await input.registry.propose(input.agentId, row);
+    input.onProposed?.(row);
     proposed++;
   }
   return { found: commands.length, proposed };
