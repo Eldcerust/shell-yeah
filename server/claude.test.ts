@@ -229,11 +229,13 @@ test("output that fits goes whole; longer output goes as a summary with error-lo
   assert.ok(long.text.includes("x".repeat(2_000) + "…"), "each line is clamped");
 });
 
-test("the result sentence covers still running, stopped, interrupted, killed and couldn't start", () => {
+test("the result sentence covers still running, stopping, stopped, interrupted, killed and couldn't start", () => {
   const at = (phase: RunRow["phase"]) => formatReport(row({ phase }), T0 + 12_000);
   assert.match(at({ kind: "running", startedAt: T0, stopRequestedAt: null }).text, /still running after 12s; this is the output so far/);
   assert.match(at({ kind: "running", startedAt: T0, stopRequestedAt: null }).visible, /still running, 12s so far/);
-  assert.match(at({ kind: "stopped", startedAt: T0, endedAt: T0 + 3_100, exitCode: null, signal: "SIGINT" }).text, /the user stopped it after 3\.1s/);
+  assert.match(at({ kind: "running", startedAt: T0, stopRequestedAt: T0 + 3_100 }).text, /the user stopped it after 3\.1s; this is the output so far/);
+  assert.match(at({ kind: "running", startedAt: T0, stopRequestedAt: T0 + 3_100 }).visible, /\(stopped, 3\.1s\)/);
+  assert.match(at({ kind: "stopped", startedAt: T0, endedAt: T0 + 3_100, exitCode: null, signal: "SIGINT" }).text, /the user stopped it after 3\.1s; this is the output so far/);
   assert.match(at({ kind: "interrupted", startedAt: T0, endedAt: T0 + 41_000 }).text, /interrupted after 41s when the plugin restarted/);
   assert.match(at({ kind: "failed", startedAt: T0, endedAt: T0 + 100, exitCode: null, signal: "SIGKILL", message: null }).text, /killed by SIGKILL after 0\.1s/);
   assert.match(at({ kind: "failed", startedAt: T0, endedAt: T0, exitCode: null, signal: null, message: "Folder not found: /x" }).visible, /couldn't start/);
@@ -615,6 +617,20 @@ test("Auto forward results on and Auto-run off: pressing Run on the card sends t
   await until(() => s.sentToAgent.length > 0);
   assert.equal(s.sentToAgent.length, 1);
   await s.cleanup();
+});
+
+test("pressing Stop with Auto forward results on sends the output so far at once, saying it was stopped", { timeout: 20_000 }, async () => {
+  const s = fakeServer({ autoSend: true });
+  const cwd = mkdtempSync(join(tmpdir(), "shell-yeah-stop-"));
+  const command = process.platform === "win32" ? "Start-Sleep -Seconds 30" : "sleep 30";
+  const { runId } = (await s.handlers.get("shell-yeah.start")!({ agentId: "agent-9", cwd, command, origin: "claude" }, s.ctx)) as { runId: string };
+  await s.handlers.get("shell-yeah.stop")!({ runId, force: false }, s.ctx);
+  await until(() => s.sentToAgent.length > 0);
+  assert.equal(s.sentToAgent[0].text.includes("stopped"), true, s.sentToAgent[0].text);
+  const attachment = (s.sentToAgent[0].opts.attachments as Array<{ text: string }>)[0];
+  assert.match(attachment.text, /the user stopped it after /);
+  await s.cleanup();
+  assert.equal(s.sentToAgent.length, 1, "the end that follows does not send it again");
 });
 
 test("a command the user typed is sent back only when Forward my own commands is on, whatever Auto forward results says", async () => {

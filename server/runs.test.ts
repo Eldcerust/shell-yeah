@@ -17,6 +17,8 @@ const noTerminal = loadPty() === null;
 const WINDOWS = process.platform === "win32";
 const posixTest = WINDOWS ? test.skip : test;
 const windowsTest = WINDOWS ? test : test.skip;
+// A command that keeps going until it is stopped, in each platform's shell.
+const LONG = WINDOWS ? "Start-Sleep -Seconds 30" : "sleep 30";
 
 async function until(check: () => boolean, ms = 10_000): Promise<void> {
   const started = Date.now();
@@ -28,6 +30,7 @@ async function until(check: () => boolean, ms = 10_000): Promise<void> {
 
 function harness(opts: { limits?: Partial<Limits>; publish?: (row: RunRow) => Promise<void> | void; env?: NodeJS.ProcessEnv; terminal?: "auto" | "off" } = {}) {
   const published: RunRow[] = [];
+  const stopping: RunRow[] = [];
   const registry = createRunRegistry({
     publish: async (_agentId, row) => {
       await opts.publish?.(row);
@@ -37,12 +40,13 @@ function harness(opts: { limits?: Partial<Limits>; publish?: (row: RunRow) => Pr
     env: opts.env ?? process.env,
     limits: opts.limits,
     terminal: opts.terminal,
+    onStopRequested: (_agentId, row) => { stopping.push(row); },
   });
   const rows = (id: string) => published.filter((row) => row.runId === id);
   const card = (id: string) => published.filter((row) => cardIdOf(row) === id).at(-1)!;
   const phases = (id: string) => rows(id).map((row) => row.phase.kind);
   const text = (id: string) => registry.snapshot(id, 400)!.output.lines.map(lineText);
-  return { registry, published, rows, card, phases, text };
+  return { registry, published, rows, card, phases, text, stopping };
 }
 
 async function run(registry: RunRegistry, command: string, cwd = dir(), extra: { runId?: string; origin?: "user" | "claude" } = {}) {
@@ -88,6 +92,23 @@ posixTest("without a terminal, exit codes and signals map to ok, failed and stop
   h.registry.stop(sleeping, false);
   const stopped = await ended(h.registry, sleeping);
   assert.equal(stopped.phase.kind, "stopped");
+  await h.registry.shutdown();
+});
+
+test("Stop announces the run at once, while it is still running, and only the first press does", { timeout: 20_000 }, async () => {
+  const h = harness({ limits: { stopToTermMs: 4_000, stopToKillMs: 5_000 } });
+  const id = await run(h.registry, LONG);
+  await delay(100);
+  h.registry.stop(id, false);
+  assert.equal(h.stopping.length, 1, "announced before stop() returned");
+  const phase = h.stopping[0].phase;
+  assert.ok(phase.kind === "running");
+  assert.notEqual(phase.stopRequestedAt, null, "the row carries the stop time");
+  assert.equal(h.registry.snapshot(id, 1)!.phase.kind, "running");
+  h.registry.stop(id, true);
+  assert.equal(h.stopping.length, 1, "a second press does not announce it again");
+  await ended(h.registry, id);
+  assert.equal(h.registry.snapshot(id, 1)!.phase.kind, "stopped");
   await h.registry.shutdown();
 });
 

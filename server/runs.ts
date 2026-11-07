@@ -16,6 +16,9 @@ export interface RunsDeps {
   terminal?: "auto" | "off";
   // Called once when a run ends, in any way, with its row as the daemon sees it then.
   onEnded?(agentId: string, row: RunRow): void;
+  // Called the moment a Stop is accepted, before the process is interrupted, with the row as
+  // the daemon sees it then: still running, with stopRequestedAt set.
+  onStopRequested?(agentId: string, row: RunRow): void;
 }
 
 export interface StartInput {
@@ -235,6 +238,14 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
     }
   }
 
+  function announceStop(run: Run) {
+    try {
+      deps.onStopRequested?.(run.agentId, rowOf(run, limits.scrollbackLines));
+    } catch {
+      // A failing listener must not keep Stop from stopping the process.
+    }
+  }
+
   function settle(run: Run, code: number | null, signal: NodeJS.Signals | null) {
     if (run.phase.kind !== "running") return;
     const clock = { startedAt: run.phase.startedAt, endedAt: deps.now() };
@@ -384,6 +395,9 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
       if (!again) {
         run.phase = { ...run.phase, stopRequestedAt: deps.now() };
         bump(run);
+        // Before the interrupt, so the agent hears about the stop without waiting for a
+        // command that ignores Ctrl+C to finish dying.
+        announceStop(run);
       }
       if (force || again) {
         proc.kill("SIGKILL");
