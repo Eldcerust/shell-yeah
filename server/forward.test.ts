@@ -9,6 +9,7 @@ const clock = { startedAt: T0, endedAt: T0 + 1000 };
 const ok: Phase = { kind: "ok", ...clock };
 const failed: Phase = { kind: "failed", ...clock, exitCode: 1, signal: null, message: null };
 const stopped: Phase = { kind: "stopped", ...clock, exitCode: null, signal: "SIGINT" };
+const stopping: Phase = { kind: "running", startedAt: T0, stopRequestedAt: T0 + 500 };
 const interrupted: Phase = { kind: "interrupted", ...clock };
 
 const row = (extra: Partial<RunRow> = {}): RunRow => ({
@@ -62,12 +63,23 @@ test("a failure is sent too, since it is what the agent needs", async () => {
   assert.deepEqual(d.sent, ["a:r1"]);
 });
 
-test("a command the user stopped, one that was interrupted, and one still running are not sent, and a stop is logged", async () => {
-  for (const phase of [stopped, interrupted, { kind: "running", startedAt: T0, stopRequestedAt: null } as Phase, { kind: "proposed" } as Phase]) {
+test("a command the user stopped is sent, immediately when Stop is pressed and again as a stopped row", async () => {
+  const immediate = deps();
+  await forwardResult(immediate.forward, "a", row({ phase: stopping }));
+  assert.deepEqual(immediate.sent, ["a:r1"]);
+  assert.deepEqual(immediate.logged, ["forward r1: sent"]);
+  const ended = deps();
+  await forwardResult(ended.forward, "a", row({ phase: stopped }));
+  assert.deepEqual(ended.sent, ["a:r1"]);
+});
+
+test("a command that was interrupted, one still running normally, and one not started are not sent, and an interruption is logged", async () => {
+  for (const phase of [interrupted, { kind: "running", startedAt: T0, stopRequestedAt: null } as Phase, { kind: "proposed" } as Phase]) {
     const d = deps();
     await forwardResult(d.forward, "a", row({ phase }));
     assert.deepEqual(d.sent, [], phase.kind);
-    if (phase.kind === "stopped" || phase.kind === "interrupted") assert.equal(d.logged[0], `forward r1: not sent, it was ${phase.kind}`);
+    assert.equal(d.logged.length, phase.kind === "interrupted" ? 1 : 0, phase.kind);
+    if (phase.kind === "interrupted") assert.equal(d.logged[0], "forward r1: not sent, it was interrupted");
   }
 });
 
@@ -119,4 +131,29 @@ test("turning the setting off during a pause stops the retries", async () => {
   d.forward.wait = async () => { on = false; };
   await forwardResult(d.forward, "a", row());
   assert.deepEqual(d.sent, []);
+});
+
+test("the stop announced at once and the end that follows send the result only once", async () => {
+  const d = deps();
+  const sending = new Set<string>();
+  d.forward.sending = sending;
+  let started!: () => void;
+  let finish!: () => void;
+  const begun = new Promise<void>((resolve) => { started = resolve; });
+  const done = new Promise<void>((resolve) => { finish = resolve; });
+  d.forward.send = async (_agentId, runId) => {
+    d.sent.push(runId);
+    started();
+    await done;
+  };
+
+  const immediate = forwardResult(d.forward, "a", row({ phase: stopping }));
+  await begun;
+  await forwardResult(d.forward, "a", row({ phase: stopped }));
+  assert.equal(d.logged.at(-1), "forward r1: not sent, it is being sent");
+  finish();
+  await immediate;
+  assert.deepEqual(d.sent, ["r1"]);
+  assert.equal(d.logged.at(-1), "forward r1: sent");
+  assert.equal(sending.size, 0);
 });

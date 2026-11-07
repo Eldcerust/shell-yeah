@@ -69,7 +69,7 @@ After **Run**, the card shows the output like any other run, and **Send to Claud
 By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Three switches at the bottom of the **Run** window (the Run pill in the message box) change that. Both are off by default and apply to every chat, and a change takes effect for the next reply. A line under them says what the current setting does.
 
 - **Auto-run.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
-- **Auto forward results.** When a command the agent handed you finishes, its output goes back to the agent, as **Send** sends it, so it can carry on without you. It works the same for a command **Auto-run** started and for one you started by pressing **Run** on its card.
+- **Auto forward results.** When a command the agent handed you finishes, its output goes back to the agent, as **Send** sends it, so it can carry on without you. It works the same for a command **Auto-run** started and for one you started by pressing **Run** on its card. Pressing **Stop** sends it at once too, saying the command was stopped and carrying the output so far.
 - **Forward my own commands.** The same for the commands you type yourself, with **/sh** or in the **Run** window. It is its own switch because what one of your own commands prints, a token for instance, goes to the agent. It is independent of the other two.
 
 With both on, an agent can run a command, read the result and write the next command with nobody pressing anything.
@@ -79,7 +79,7 @@ With both on, an agent can run a command, read the result and write the next com
 - Only the `sh run` blocks an agent wrote count, the same ones that get a card. **/sh**, the **Run** window and plain shell blocks are not started for you.
 - The commands run on this computer as you, with no confirmation, so a reply that quotes untrusted text could include one. Leave it off for agents you wouldn't give a shell.
 - A command that asks for a login or a code waits for you to type it in its card, as it does after pressing **Run**.
-- Each result goes back as soon as its command finishes. A failure is sent too, since it is what the agent needs. A command you stopped is not sent. If the agent is waiting for you to approve something, the result stays unsent and the card's **Send** button is still there. A send that fails for another reason is tried again a few times, and every outcome is written to the plugin's log (`paseo plugin logs shell-yeah`).
+- Each result goes back as soon as its command finishes. A failure is sent too, since it is what the agent needs. A command you stop is sent at the moment you press **Stop**, while it is still ending, so the agent knows why the output stops there. If the agent is waiting for you to approve something, the result stays unsent and the card's **Send** button is still there. A send that fails for another reason is tried again a few times, and every outcome is written to the plugin's log (`paseo plugin logs shell-yeah`).
 - At most 20 commands start this way per chat in an hour. With results going back, an agent can answer each one with the next, so this is the brake on a loop nobody is watching. Past it, the cards wait for **Run**.
 
 <img src="images/5-ran.png" alt="The deploy card after pressing Run: the command finished and Send to Claude is ready" width="600">

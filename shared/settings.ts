@@ -11,7 +11,8 @@ export const autoRunSettings = defineSettings({
   schema: z.object({
     // Start the commands an agent hands over as soon as its reply ends.
     run: z.boolean().default(false),
-    // Send the output of a command the agent handed over back to it when it finishes.
+    // Send the output of a command the agent handed over back to it when it finishes, or the
+    // moment you stop it.
     send: z.boolean().default(false),
     // The same for a command the user typed (/sh or the Run window's box). Separate, because
     // what one of those prints is the user's own business until they say otherwise.

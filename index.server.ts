@@ -22,6 +22,9 @@ export default function contribute(server: PluginServerContext) {
     },
     now: Date.now,
     env: process.env,
+    // A stop is announced at once, while the process is still dying, so the agent doesn't wait
+    // for a command that ignores Ctrl+C. The run's end then finds the result already sent.
+    onStopRequested: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
     // With Auto forward results on, a command the agent handed over sends its result when it ends;
     // with Forward my own commands on, so does one the user typed.
     onEnded: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
@@ -34,6 +37,7 @@ export default function contribute(server: PluginServerContext) {
   };
   const autoBudget = createAutoRunBudget(Date.now);
   const log = (message: string) => console.log(`[shell-yeah] ${message}`);
+  const sending = new Set<string>();
   const forwardDeps = {
     enabled: (origin: "claude" | "user") => autoSetting(origin === "user" ? "own" : "send"),
     send: (agentId: string, runId: string) => {
@@ -42,6 +46,7 @@ export default function contribute(server: PluginServerContext) {
     },
     wait: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
     log,
+    sending,
   };
   const sendCounts = new Map<string, number>();
   const logs = createLogStore({ root: defaultLogRoot() });

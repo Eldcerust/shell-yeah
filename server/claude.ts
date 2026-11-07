@@ -340,7 +340,11 @@ function summary(lines: string[], total: number, logPath: string | null, facts: 
 function outcome(phase: Phase, now: number): { result: string; short: string } {
   switch (phase.kind) {
     case "running": {
-      const d = formatDuration(now - phase.startedAt);
+      // A stop is announced while the process is still dying, so the row is still "running";
+      // the stop time is what ended it as far as the agent is concerned.
+      const endedAt = phase.stopRequestedAt ?? now;
+      const d = formatDuration(endedAt - phase.startedAt);
+      if (phase.stopRequestedAt !== null) return { result: `the user stopped it after ${d}; this is the output so far`, short: `stopped, ${d}` };
       return { result: `it is still running after ${d}; this is the output so far`, short: `still running, ${d} so far` };
     }
     case "ok":
@@ -353,7 +357,7 @@ function outcome(phase: Phase, now: number): { result: string; short: string } {
     }
     case "stopped": {
       const d = formatDuration(phase.endedAt - phase.startedAt);
-      return { result: `the user stopped it after ${d}`, short: `stopped, ${d}` };
+      return { result: `the user stopped it after ${d}; this is the output so far`, short: `stopped, ${d}` };
     }
     case "interrupted": {
       const d = formatDuration(phase.endedAt - phase.startedAt);
