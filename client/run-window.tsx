@@ -1,4 +1,4 @@
-import { useAgent, useRpc, type PluginButtonContentProps } from "@getpaseo/plugin/client";
+import { useAgent, type PluginButtonContentProps } from "@getpaseo/plugin/client";
 import { Icon, TextInput, useToast } from "@getpaseo/plugin/client/ui";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View, type TextInput as NativeTextInput } from "react-native";
@@ -7,6 +7,7 @@ import { start, suggest } from "../shared/rpc.ts";
 import { basename, errorMessage, risksOf, shortCommand, splitTitle, wrappedLines } from "../shared/text.ts";
 import { capitalize } from "../shared/view.ts";
 import { AutoSwitches } from "./auto-switches.tsx";
+import { useRpc } from "./hub-compat.tsx";
 import { isLight, makePalette, withAlpha, type ThemeColors } from "./palette.ts";
 import { Button, Spinner, codeSurface, mono } from "./ui.tsx";
 

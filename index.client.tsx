@@ -1,5 +1,8 @@
 import type { PluginButtonRegistration, PluginClientContext } from "@getpaseo/plugin/client";
+import { AutoRunSettingsScreen } from "./client/auto-settings-screen.tsx";
+import { AUTO_RUN_SETTINGS_ID } from "./client/auto-switches.tsx";
 import { observeDirectory, type PaseoAgentUpdate } from "./client/directory.ts";
+import { registerComposerPill } from "./client/hub-compat.tsx";
 import { RunRowView } from "./client/run-row.tsx";
 import { RunWindow } from "./client/run-window.tsx";
 import { commandOutputSource, scan, start } from "./shared/rpc.ts";
@@ -35,6 +38,7 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addTimelineRenderer({ kind: RUN_KIND, version: RUN_VERSION, schema: runRow, Component: RunRowView }),
     client.addAttachmentSource(commandOutputSource),
+    client.addSettingsScreen({ id: AUTO_RUN_SETTINGS_ID, title: "Run", icon: "SquareTerminal", Component: AutoRunSettingsScreen }),
   ];
   const stopPills = addRunPills(client);
   return () => {
@@ -54,8 +58,9 @@ function addRunPills(client: PluginClientContext): () => void {
   const add = (agent: { id: string; workspaceId?: string | null }) => {
     if (!agent.workspaceId || pills.get(agent.id)?.workspaceId === agent.workspaceId) return;
     remove(agent.id);
-    const pill = client.addComposerPill({
-      id: "run",
+    // Follows the Pill hub when one is running; otherwise it is the Run pill it always was.
+    const pill = registerComposerPill(client, {
+      toolId: "run",
       workspaceId: agent.workspaceId,
       agentId: agent.id,
       button: { title: "Run a command", label: "Run", icon: "SquareTerminal", behavior: { kind: "popover", Content: RunWindow } },

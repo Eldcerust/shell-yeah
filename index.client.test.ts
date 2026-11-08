@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import React from "react";
 import { clientHarness } from "./test-support/client-harness.mjs";
 import type { Phase, RunRow } from "./shared/row.ts";
 
@@ -102,4 +103,39 @@ test("every chat gets one Run pill that opens the Run window; updates keep it, s
   stop();
   assert.equal(pills().length, 0);
   assert.equal(h.agents.listenerCount, 0);
+});
+
+test("with the Pill hub running the Run window moves into it; when the hub stops the Run pill comes back", async () => {
+  const key = "__paseoPillHub";
+  type Attached = { toolId: string; agentId: string; removed: boolean };
+  const attached: Attached[] = [];
+  const hub = {
+    merges: () => true,
+    attach(entry: { toolId: string; agentId: string }) {
+      const record: Attached = { toolId: entry.toolId, agentId: entry.agentId, removed: false };
+      attached.push(record);
+      return { update() {}, remove: () => void (record.removed = true) };
+    },
+  };
+  const bus = { version: 1, hub: hub as unknown, tools: new Map(), listeners: new Set<() => void>() };
+  // The harness runs each plugin in its own context with its own globalThis, as an app might, so
+  // the hub is published only on the react module, the one object both sides share.
+  Object.defineProperty(React, key, { value: bus, configurable: true, writable: true });
+  try {
+    const h = clientHarness(directory);
+    const stop = h.load("index.client.tsx").default(h.client);
+    h.agents.bootstrap([{ agent: { id: "a1", workspaceId: "w1" } }]);
+    await h.flush();
+    const own = () => (h.registrations as unknown as { removed: boolean }[]).filter((entry) => !entry.removed);
+    assert.equal(own().length, 0, "no pill of its own while the hub hosts the window");
+    assert.deepEqual(plain(attached.filter((entry) => !entry.removed).map((entry) => [entry.toolId, entry.agentId])), [["run", "a1"]]);
+    bus.hub = undefined;
+    for (const listener of [...bus.listeners]) listener();
+    assert.equal(own().length, 1, "the plain Run pill is back");
+    assert.equal(attached[0].removed, true, "and the hub entry is gone");
+    stop();
+    assert.equal(own().length, 0);
+  } finally {
+    delete (React as unknown as Record<string, unknown>)[key];
+  }
 });

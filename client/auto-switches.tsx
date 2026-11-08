@@ -5,12 +5,28 @@ import { LIMITS } from "../shared/limits.ts";
 import { autoRunSettings } from "../shared/settings.ts";
 import { autoCaption } from "../shared/view.ts";
 import { withAlpha, type ThemeColors } from "./palette.ts";
+import { useHostedClient } from "./hub-compat.tsx";
 import { Button } from "./ui.tsx";
+
+export const AUTO_RUN_SETTINGS_ID = "auto-run";
 
 // The Run window's footer: whether the agent's commands start on their own, and whether their
 // results go back on their own. Both are one host-wide setting the server reads, so a switch
 // here applies to every chat and takes effect for the next reply.
+//
+// Settings belong to the plugin that owns them, so inside the Pill hub this footer cannot edit
+// them. It links to the plugin's own settings screen instead.
 export function AutoSwitches({ colors, compact }: { colors: ThemeColors; compact: boolean }) {
+  const hosted = useHostedClient();
+  if (!hosted) return <LiveAutoSwitches colors={colors} compact={compact} />;
+  return (
+    <View style={{ borderTopWidth: 1, borderTopColor: withAlpha(colors.border, 0.6), paddingTop: 10 }}>
+      <Button icon="Settings2" label="Auto-run settings" tone="ghost" onPress={() => hosted.openSettings(AUTO_RUN_SETTINGS_ID)} compact={compact} colors={colors} accessibilityLabel="Open the automatic run settings" />
+    </View>
+  );
+}
+
+function LiveAutoSwitches({ colors, compact }: { colors: ThemeColors; compact: boolean }) {
   const settings = useSettings(autoRunSettings);
   const muted = { color: colors.foregroundMuted, fontSize: 12, lineHeight: 16 };
   const divider = { borderTopWidth: 1, borderTopColor: withAlpha(colors.border, 0.6), paddingTop: 10, gap: 4 };
