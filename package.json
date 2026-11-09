@@ -1,27 +1,23 @@
 {
   "name": "@stevecastaneda/paseo-shell-yeah",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Type /sh and a command to run it as you, in the agent's folder, with live output in the chat. The agent sees it only if you send it.",
+  "keywords": [
+    "command",
+    "paseo",
+    "paseo-plugin",
+    "shell",
+    "terminal"
+  ],
+  "homepage": "https://github.com/Eldcerust/shell-yeah#readme",
   "license": "MIT",
   "author": "Steve Castaneda",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Eldcerust/shell-yeah.git"
   },
-  "homepage": "https://github.com/Eldcerust/shell-yeah#readme",
   "bugs": {
     "url": "https://github.com/Eldcerust/shell-yeah/issues"
-  },
-  "keywords": [
-    "paseo",
-    "paseo-plugin",
-    "shell",
-    "terminal",
-    "command"
-  ],
-  "type": "module",
-  "engines": {
-    "node": "^22.18.0 || >=23.6.0"
   },
   "files": [
     "paseo-plugin.json",
@@ -36,6 +32,7 @@
     "tsconfig.json",
     "!**/*.test.ts"
   ],
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
@@ -56,5 +53,8 @@
     "react-native": "0.81.5",
     "typescript": "^5.9.3",
     "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=23.6.0"
   }
 }

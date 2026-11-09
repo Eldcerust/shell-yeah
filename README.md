@@ -43,7 +43,7 @@ The plugin drops a leading `! ` or `$ `, so you can paste a command straight fro
 
 Nothing reaches the agent until you press **Send**. The chat then shows one line, like ``Output of `npm test` (exit 1, 2.9s) · all 29 lines attached``. The agent gets the command and its output as an attachment, which Paseo doesn't display, so that line says what went along. If the agent is in the middle of a turn, the output joins that turn instead of interrupting it. If the agent is waiting for you to approve something, the plugin asks you to answer that first.
 
-Output of up to 200 lines goes whole. Longer output goes as a summary: the first 10 lines, the last 60, and the lines that look like errors, with their line numbers. The plugin saves the full log to a file and gives the agent its path, so the agent can read or search the rest itself. The chat line then says ``summary attached, full 12,408-line log saved for the agent``.
+Output of up to 200 lines goes whole. Longer output goes as a summary: the first 10 lines, the last 60, and the lines that look like errors, with their line numbers. The plugin saves the full log to a file and gives the agent its path, so the agent can read or search the rest itself. The chat line then says `summary attached, full 12,408-line log saved for the agent`.
 
 Saved logs go in `~/.local/state/shell-yeah/logs` (`%LOCALAPPDATA%\shell-yeah\logs` on Windows), one folder per chat, never in your project. They clean up on their own. Archiving a chat deletes its logs, and archiving a workspace archives its chats. Any log older than a week is deleted, and past 100 MB the oldest logs go first.
 
@@ -96,7 +96,7 @@ Agents that started before the plugin was installed don't know the rule. Type `/
 
 ## The Run pill
 
-Agents still write a command into a sentence now and then: "sign in with `npm login`, then publish with `npm publish`". The **Run** pill above the message box handles those. It opens a small window that lists the commands in the agent's last reply, up to eight, from Run cards, shell code blocks and sentences. Press one to run it as a card in the chat. The pencil puts it in the box first so you can change it. Or paste any command into the box and press Enter. Shift+Enter adds a line.
+Agents still write a command into a sentence now and then: "sign in with `npm login`, then publish with `npm publish`". The **Run** pill above the message box handles those. It opens a small window that lists the commands in the agent's last reply, up to eight, from Run cards, shell code blocks and sentences. Press a short one-line command to run it as a card in the chat. A longer command, or one with more than one line, goes into the box first so you can read all of it before you press Run. The pencil puts any command in the box so you can change it. Or paste any command into the box and press Enter. Shift+Enter adds a line.
 
 <img src="images/8-run-window.png" alt="The Run pill's window lists the commands from the agent's reply, including ones written in a sentence, and takes any command you paste" width="380">
 
@@ -127,6 +127,12 @@ This is a fork, and it has the same plugin ID as the original, so install one or
 Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.js 22.18 or later on the daemon host.
 
 ## Changelog
+
+### 1.4.1
+
+- [Fixed] **The Run window shows everything a row runs.** A row now runs on one press only when its command is one short line that the row shows in full. A longer command, or one with more than one line, goes into the box first so you can read all of it, and the row says how many more lines it has.
+- [Fixed] **Line breaks in agent commands.** Shell Yeah now reads every kind of line break in an agent's reply the same way, so a card's title never holds part of the command on Windows. It also skips commands that hold hidden control characters.
+- [Fixed] **Network paths on Windows.** Opening the Run window no longer looks up network paths that appear in the agent's reply.
 
 ### 1.4.0
 
