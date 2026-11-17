@@ -323,7 +323,7 @@ test("the Run window says what its three switches mean together, and warns whene
   assert.deepEqual([off.tone, off.text], ["muted", "Off. Applies to every chat."]);
   assert.equal(autoCaption(true, false, false, 20).text, "Agent commands start on their own.");
   assert.equal(autoCaption(true, false, false, 20).tone, "warning");
-  assert.equal(autoCaption(true, true, false, 20).text, "Agent commands start on their own. Their results go back. No one is watching. Max 20 per chat an hour.");
+  assert.equal(autoCaption(true, true, false, 200).text, "Agent commands start on their own. Their results go back. No one is watching. Max 200 per chat an hour.");
   // Forwarding alone covers commands run from the agent's cards.
   assert.equal(autoCaption(false, true, false, 20).text, "Results of the agent's commands go back.");
   // The own-commands switch is independent of the other two, and says what it sends.

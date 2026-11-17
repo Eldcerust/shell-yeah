@@ -84,7 +84,7 @@ With both on, an agent can run a command, read the result and write the next com
 - The commands run on this computer as you, with no confirmation, so a reply that quotes untrusted text could include one. Leave it off for agents you wouldn't give a shell.
 - A command that asks for a login or a code waits for you to type it in its card, as it does after pressing **Run**.
 - Each result goes back as soon as its command finishes. A failure is sent too, since it is what the agent needs. A command you stop is sent at the moment you press **Stop**, while it is still ending, so the agent knows why the output stops there. If the agent is waiting for you to approve something, the result stays unsent and the card's **Send** button is still there. A send that fails for another reason is tried again a few times, and every outcome is written to the plugin's log (`paseo plugin logs shell-yeah`).
-- At most 20 commands start this way per chat in an hour. With results going back, an agent can answer each one with the next, so this is the brake on a loop nobody is watching. Past it, the cards wait for **Run**.
+- At most 200 commands start this way per chat in an hour. With results going back, an agent can answer each one with the next, so this is the brake on a loop nobody is watching. Past it, the cards wait for **Run**.
 
 <img src="images/5-ran.png" alt="The deploy card after pressing Run: the command finished and Send to Claude is ready" width="600">
 

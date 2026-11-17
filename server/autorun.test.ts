@@ -128,7 +128,7 @@ test("every decision is logged, so a chain that quietly stops can be explained",
   assert.match(off.logged[0], /the setting is off/);
   const capped = fake({}, { takes: () => false });
   await autoRun(capped.deps, "a", [proposal("r1", "one")]);
-  assert.match(capped.logged[0], /20 an hour reached/);
+  assert.match(capped.logged[0], /200 an hour reached/);
 });
 
 test("untilEnded follows the revision and returns the ending phase", async () => {
