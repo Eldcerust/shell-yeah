@@ -14,6 +14,7 @@ import { runsOnOneTap } from "../shared/text.ts";
 import { describe } from "../shared/view.ts";
 import {
   HANDOFF_PROMPT,
+  HANDOFF_PROMPT_EVERYTHING,
   MAYBE_SENT,
   PERMISSION_PENDING,
   RUN_GONE,
@@ -285,6 +286,29 @@ test("the handoff block is added once, after what is already there, and teaches 
   assert.match(HANDOFF_PROMPT, /starts with "! " or "\/sh "/);
   assert.match(HANDOFF_PROMPT, /<bash-input>/);
   assert.match(HANDOFF_PROMPT, /Never leave one only in a sentence or in inline code/);
+});
+
+test("the handoff setting's two modes differ only in the closing instruction", () => {
+  // Suggest is what every earlier version injected, to the byte.
+  assert.match(HANDOFF_PROMPT, /Run everything else yourself\./);
+  assert.equal(withHandoffPrompt(undefined, "suggest"), HANDOFF_PROMPT);
+  // Everything drops that sentence and says the agent's own shell is not an option.
+  assert.doesNotMatch(HANDOFF_PROMPT_EVERYTHING, /Run everything else yourself/);
+  assert.match(HANDOFF_PROMPT_EVERYTHING, /Every shell command must go through Shell Yeah/);
+  assert.match(HANDOFF_PROMPT_EVERYTHING, /never run one with your own shell tool/);
+  assert.match(HANDOFF_PROMPT_EVERYTHING, /If no Run card appears/);
+  assert.equal(withHandoffPrompt(undefined, "everything"), HANDOFF_PROMPT_EVERYTHING);
+  // The rest of the block is shared: given the same body, the two differ only in that sentence.
+  assert.equal(HANDOFF_PROMPT.replace("Run everything else yourself.", "X"), HANDOFF_PROMPT_EVERYTHING.replace(/Every shell command must go through Shell Yeah[^\n]*/, "X"));
+});
+
+test("the tag guard leaves a second injection alone in both modes", () => {
+  for (const mode of ["suggest", "everything"] as const) {
+    const once = withHandoffPrompt("Be terse.\n", mode);
+    assert.ok(once.startsWith("Be terse.\n\n<shell-yeah>"));
+    assert.equal(withHandoffPrompt(once, mode), once, mode);
+    assert.equal(withHandoffPrompt(once, mode === "suggest" ? "everything" : "suggest"), once, "the other mode never injects twice");
+  }
 });
 
 test("the latest reply is the assistant text since the last user message, chunks joined, tool calls in between tolerated", () => {

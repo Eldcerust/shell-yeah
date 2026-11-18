@@ -46,7 +46,8 @@ function LiveAutoSwitches({ colors, compact }: { colors: ThemeColors; compact: b
 
   const { run, send, own } = settings.values;
   const caption = autoCaption(run, send, own, LIMITS.autoRunsPerHour);
-  const save = (next: { run: boolean; send: boolean; own: boolean }) => void settings.save(next, settings.revision);
+  // The shell and handoff choices live on the settings screen; a switch here carries them through.
+  const save = (next: { run: boolean; send: boolean; own: boolean }) => void settings.save({ ...settings.values, ...next }, settings.revision);
   return (
     <View style={divider}>
       <Row label="Auto-run" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value, send, own })} />

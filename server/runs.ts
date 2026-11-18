@@ -4,7 +4,7 @@ import { LIMITS, type Limits } from "../shared/limits.ts";
 import { cardIdOf, isEnded, runNumberOf, type LiveView, type PastRun, type Phase, type RunRow } from "../shared/row.ts";
 import { createScreen, fitLines, jsonBytes, looksBinary, type Screen } from "./screen.ts";
 import { pickSpawner, type Proc, type Spawner } from "./proc.ts";
-import { shellCommand } from "./shells.ts";
+import { shellCommand, type ShellMode } from "./shells.ts";
 
 export interface RunsDeps {
   // Rejects if the agent isn't loaded.
@@ -19,6 +19,9 @@ export interface RunsDeps {
   // Called the moment a Stop is accepted, before the process is interrupted, with the row as
   // the daemon sees it then: still running, with stopRequestedAt set.
   onStopRequested?(agentId: string, row: RunRow): void;
+  // The shell a Windows command runs in. Read once per run, so turning the setting around applies
+  // to the next command. Missing or unreadable means PowerShell, the default.
+  shell?(): Promise<ShellMode>;
 }
 
 export interface StartInput {
@@ -305,10 +308,10 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
     bump(run);
   }
 
-  function launch(run: Run, spawner: Spawner) {
+  function launch(run: Run, spawner: Spawner, shell: ShellMode) {
     try {
       run.proc = spawner.start(
-        { ...shellCommand(deps.env, run.command), cwd: run.cwd, env: commandEnv(deps.env, run.cwd, spawner.terminal), flushMs: limits.exitFlushMs },
+        { ...shellCommand(deps.env, run.command, process.platform, shell), cwd: run.cwd, env: commandEnv(deps.env, run.cwd, spawner.terminal), flushMs: limits.exitFlushMs },
         {
           data: (text) => ingest(run, text),
           exit: (code, signal) => settle(run, code, signal),
@@ -376,6 +379,8 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
       if (liveCount() >= limits.maxLive) throw new Error(`${limits.maxLive} commands are already running. Stop one first.`);
       const releaseCard = claimCardBeforeAwait(cardId, id);
       const spawner = await spawnerReady;
+      // Read per run rather than at startup, so a change applies to the next command.
+      const shell = deps.shell ? await deps.shell().catch(() => "powershell" as const) : "powershell";
       if (runs.has(id)) return { runId: id };
       const last = rerunOf && pastOf(previous ? rowOf(previous, limits.scrollbackLines) : rerunOf);
       const past = rerunOf ? [...(previous?.past ?? rerunOf.past ?? []), ...(last ? [last] : [])].slice(-limits.pastRuns) : [];
@@ -413,7 +418,7 @@ export function createRunRegistry(deps: RunsDeps): RunRegistry {
         releaseCard();
         throw error;
       }
-      if (run.phase.kind === "running") launch(run, spawner);
+      if (run.phase.kind === "running") launch(run, spawner, shell);
       // A command that could not start (no such folder) is already over, and never reaches `transition`.
       else announceEnd(run);
       evict();

@@ -27,7 +27,7 @@ The output box holds the last 300 lines and stays on the newest one while the co
 
 <img src="images/9-rerun.png" alt="A card after Rerun showing Run 2 of 2, with an arrow back to the run that failed" width="600">
 
-The command runs on the Paseo host as the user Paseo runs as, in the agent's working folder, with your shell (`$SHELL -c`). It skips interactive startup files like `.zshrc`, so aliases aren't loaded. Your PATH carries over. On Windows, the command runs in PowerShell 7 if it's installed, otherwise in the Windows PowerShell that comes with Windows. It skips your PowerShell profile for the same reason.
+The command runs on the Paseo host as the user Paseo runs as, in the agent's working folder, with your shell (`$SHELL -c`). It skips interactive startup files like `.zshrc`, so aliases aren't loaded. Your PATH carries over. On Windows, the command runs in PowerShell 7 if it's installed, otherwise in the Windows PowerShell that comes with Windows, and it skips your PowerShell profile for the same reason. The **Run** settings screen has a **Shell on Windows** choice: **PowerShell** (the default) or **Command Prompt**. PowerShell takes the command as an encoded script; Command Prompt takes the command as typed, passed whole to `cmd.exe` as one argument, so quotes, pipes and `&` reach it unchanged. It applies to every command on this host, and macOS and Linux always use your login shell.
 
 Each command gets a terminal of its own, so it behaves as it does in yours. When it asks for a 2FA code, a password or a yes or no, click anywhere in the output box and type, as you would in a terminal. The box's border lights up while your keys go to the command. On a computer, after you press **Run** or **Rerun** in a card, they go there without a click. Each key goes to the command as you press it, so a one-key menu takes one key and arrow-key menus work. What you type shows only if the command shows it, so a password stays hidden. **Esc** stops typing, and so does switching to another window. Click the output to type again. On a phone, tap the output.
 
@@ -69,7 +69,6 @@ When the reply ends, the plugin adds a card under it: the agent's comment as the
 After **Run**, the card shows the output like any other run, and **Send to Claude** is the main button.
 
 ### Running commands automatically
-
 By default nothing an agent suggests runs until you press **Run**, and nothing goes back to the agent until you press **Send**. Three switches at the bottom of the **Run** window (the Run pill in the message box) change that. Both are off by default and apply to every chat, and a change takes effect for the next reply. A line under them says what the current setting does.
 
 - **Auto-run.** The cards start themselves as soon as the reply ends, as if you had pressed **Run** on each.
@@ -77,6 +76,35 @@ By default nothing an agent suggests runs until you press **Run**, and nothing g
 - **Forward my own commands.** The same for the commands you type yourself, with **/sh** or in the **Run** window. It is its own switch because what one of your own commands prints, a token for instance, goes to the agent. It is independent of the other two.
 
 With both on, an agent can run a command, read the result and write the next command with nobody pressing anything.
+
+### Choosing the Windows shell
+The **Run** settings screen (Settings → Run) has one more choice: **Shell on Windows**, set to **PowerShell** unless you change it. It applies to every command on this host, and a change takes effect for the next command you run.
+
+- **PowerShell** hands the command over as an encoded script, the way this plugin has always run on Windows.
+- **Command Prompt** runs `cmd.exe` and passes the command as one argument after `/d /s /c`, so quotes, pipes and ampersands reach it exactly as written.
+
+macOS and Linux ignore the choice: your login shell runs the command either way.
+
+### Handing commands over
+
+Shell Yeah adds one tagged block to every new agent's system prompt that teaches the `sh run` block. The **Agent handoff** choice on the **Run** settings screen decides how that block ends.
+
+- **Suggest** (the default): the agent runs everything else itself and hands over only what you should run — a login, a deploy, something its sandbox blocks. The block ends with “Run everything else yourself.”
+- **Everything**: every shell command must go through Shell Yeah, the agent must not run one with its own shell tool, and if no Run card appears under its message it says which command it meant to hand over and stops.
+
+The prompt is set when an agent is created, so a change applies to new chats, not to one already running.
+
+### A tool the agent can call
+
+New agents also get one tool, `shell_yeah_run`. It takes a `command` and an optional `title`, starts a run through the same registry the Run button uses, in the agent's own folder, and returns at once with the run id; it does not wait for the command to finish. The command runs as you, its output shows in the card, and the agent sees that output only if you send it. If Shell Yeah refuses — too many commands already running, a folder that is gone — the tool returns the reason instead of throwing, so the agent can tell you.
+
+To make that tool the only way an agent can run a command, start its Pi process without a shell tool:
+
+```
+pi --exclude-tools bash
+```
+
+Paseo forwards a Pi session's `extraArgs` to the Pi process, and its Pi flag allowlist includes `--exclude-tools`, so with that flag Shell Yeah's tool is the only way for that agent to run a command. The flag applies to the whole host unless you scope it.
 
 - Several commands in one reply run one after another, each after the one before finished, and the chain stops at the first that fails or is stopped. The ones left over stay as cards with **Run**.
 - Turning the setting off stops the commands still waiting. A command already running keeps going; **Stop** it from its card.

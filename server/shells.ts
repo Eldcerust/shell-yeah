@@ -3,10 +3,23 @@ import { basename, posix, win32 } from "node:path";
 
 // The shell that runs a command, with the arguments that hand it the command.
 // macOS and Linux: the user's login shell, non-interactive, so startup files like .zshrc don't load.
-// Windows: PowerShell, the shell Windows Terminal opens, without the user's profile for the same reason.
-export function shellCommand(env: NodeJS.ProcessEnv, command: string, platform: NodeJS.Platform = process.platform): { file: string; args: string[] } {
-  if (platform === "win32") return { file: pickPowerShell(env), args: ["-NoLogo", "-NoProfile", "-EncodedCommand", encodePowerShell(command)] };
+// Windows: PowerShell by default, the shell Windows Terminal opens, without the user's profile for
+// the same reason. The mode setting can ask for Command Prompt instead, which takes the command as
+// typed; the command is still one argv element, so quotes, pipes and ampersands reach it unchanged.
+export type ShellMode = "powershell" | "cmd";
+
+export function shellCommand(env: NodeJS.ProcessEnv, command: string, platform: NodeJS.Platform = process.platform, mode: ShellMode = "powershell"): { file: string; args: string[] } {
+  if (platform === "win32") {
+    if (mode === "cmd") return { file: pickCommandPrompt(env), args: ["/d", "/s", "/c", command] };
+    return { file: pickPowerShell(env), args: ["-NoLogo", "-NoProfile", "-EncodedCommand", encodePowerShell(command)] };
+  }
   return { file: pickShell(env.SHELL), args: ["-c", command] };
+}
+
+// Command Prompt, which every Windows ships. ComSpec is the one the system itself uses.
+function pickCommandPrompt(env: NodeJS.ProcessEnv): string {
+  const comspec = env.ComSpec?.trim();
+  return comspec || win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
 }
 
 const SHELLS = new Set(["zsh", "bash", "sh", "dash", "ksh", "fish"]);

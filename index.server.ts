@@ -9,13 +9,15 @@ import {
   sendToClaude,
   sendVia,
   withHandoffPrompt,
+  type HandoffMode,
   type AttachDeps,
 } from "./server/claude.ts";
 import { createLogStore, defaultLogRoot } from "./server/logs.ts";
 import { autoRun, createAutoRunBudget } from "./server/autorun.ts";
 import { forwardResult } from "./server/forward.ts";
 import { createRunRegistry } from "./server/runs.ts";
-import { commandFinder } from "./server/shells.ts";
+import { shellYeahTool } from "./server/tool.ts";
+import { commandFinder, type ShellMode } from "./server/shells.ts";
 import { attachSearch, dismiss, fullOutput, input, scan, send, start, stop, suggest, tail } from "./shared/rpc.ts";
 import { RUN_KIND, RUN_VERSION, cardIdOf, type RunRow } from "./shared/row.ts";
 import { autoRunSettings } from "./shared/settings.ts";
@@ -26,6 +28,24 @@ export default function contribute(server: PluginServerContext) {
   let paseo: PluginHandlerContext["paseo"] | null = null;
   const bind = (ctx: PluginHandlerContext) => (paseo = ctx.paseo);
 
+  const autoRunSetting = server.registerSettings(autoRunSettings);
+  // An unreadable setting counts as off: nothing starts or sends on a guess.
+  const autoSetting = async (name: "run" | "send" | "own") => {
+    const state = await autoRunSetting.read();
+    return state.status === "ready" && state.values[name];
+  };
+  // A Windows command runs in PowerShell unless the user picked Command Prompt. An unreadable
+  // setting counts as PowerShell, the default, so a damaged document changes no behaviour.
+  const shellMode = async (): Promise<ShellMode> => {
+    const state = await autoRunSetting.read();
+    return state.status === "ready" ? state.values.shell : "powershell";
+  };
+  // An unreadable handoff setting counts as suggest, the default.
+  const handoffMode = async (): Promise<HandoffMode> => {
+    const state = await autoRunSetting.read();
+    return state.status === "ready" ? state.values.handoff : "suggest";
+  };
+
   const runs = createRunRegistry({
     publish: async (agentId, row) => {
       if (!paseo) throw new Error("Paseo isn't connected yet.");
@@ -33,6 +53,7 @@ export default function contribute(server: PluginServerContext) {
     },
     now: Date.now,
     env: process.env,
+    shell: shellMode,
     // A stop is announced at once, while the process is still dying, so the agent doesn't wait
     // for a command that ignores Ctrl+C. The run's end then finds the result already sent.
     onStopRequested: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
@@ -40,12 +61,6 @@ export default function contribute(server: PluginServerContext) {
     // with Forward my own commands on, so does one the user typed.
     onEnded: (agentId, row) => void forwardResult(forwardDeps, agentId, row).catch(() => undefined),
   });
-  const autoRunSetting = server.registerSettings(autoRunSettings);
-  // An unreadable setting counts as off: nothing starts or sends on a guess.
-  const autoSetting = async (name: "run" | "send" | "own") => {
-    const state = await autoRunSetting.read();
-    return state.status === "ready" && state.values[name];
-  };
   const autoBudget = createAutoRunBudget(Date.now);
   const log = (message: string) => console.log(`[shell-yeah] ${message}`);
   const sending = new Set<string>();
@@ -96,11 +111,21 @@ export default function contribute(server: PluginServerContext) {
     return { commands: scanProposals(latestAssistantText(turn.timeline), "all", commandFinder(process.env, cwd)) };
   });
 
-  // New agents only: one tagged block in the system prompt, merged after whatever is there.
-  server.before("agent.create", ({ request }) => ({
+  // New agents only: one tagged block in the system prompt, merged after whatever is there. The
+  // handoff setting picks which closing instruction the block ends with; the prompt can only be set
+  // here, because agent.open.before may change env, tools and mcpServers but not the prompt.
+  server.before("agent.create", async ({ request }) => ({
     ...request,
-    config: { ...request.config, systemPrompt: withHandoffPrompt(request.config.systemPrompt) },
+    config: { ...request.config, systemPrompt: withHandoffPrompt(request.config.systemPrompt, await handoffMode()) },
   }));
+
+  // Every agent: one tool, so an agent can hand a command over without a prompt instruction. Paseo
+  // unions each plugin's returned tools. The cast bridges the pinned 0.13 types, which predate
+  // `tools` on this request; the daemon's own guard lists tools as a change it accepts.
+  server.before("agent.session_open", ({ request }) => ({
+    ...request,
+    tools: [shellYeahTool(runs, { agentId: request.agentId, cwd: request.cwd })],
+  }) as typeof request);
 
   // Every agent: a finished turn that handed the user a command gets one proposal card per command.
   server.on("agent.turn_ended", async (event, ctx) => {
