@@ -27,9 +27,9 @@ const SHELLS: readonly { value: Shell; label: string; hint: string }[] = [
 //
 // Settings belong to the plugin that owns them, so inside the Pill hub this footer cannot edit
 // them. It links to the plugin's own settings screen instead.
-export function AutoSwitches({ colors, compact }: { colors: ThemeColors; compact: boolean }) {
+export function AutoSwitches({ colors, compact, showShell = true }: { colors: ThemeColors; compact: boolean; showShell?: boolean }) {
   const hosted = useHostedClient();
-  if (!hosted) return <LiveAutoSwitches colors={colors} compact={compact} />;
+  if (!hosted) return <LiveAutoSwitches colors={colors} compact={compact} showShell={showShell} />;
   return <HostedAutoSwitches colors={colors} compact={compact} openSettings={() => hosted.openSettings(AUTO_RUN_SETTINGS_ID)} />;
 }
 
@@ -42,13 +42,13 @@ export function HostedAutoSwitches({ colors, compact, openSettings }: { colors: 
   );
 }
 
-function LiveAutoSwitches({ colors, compact }: { colors: ThemeColors; compact: boolean }) {
+function LiveAutoSwitches({ colors, compact, showShell }: { colors: ThemeColors; compact: boolean; showShell: boolean }) {
   const settings = useSettings(autoRunSettings);
-  return <AutoSwitchesFooter settings={settings} colors={colors} compact={compact} />;
+  return <AutoSwitchesFooter settings={settings} colors={colors} compact={compact} showShell={showShell} />;
 }
 
 // The footer's states and its ready view, with the hooks kept above so a test can render it.
-export function AutoSwitchesFooter({ settings, colors, compact }: { settings: AutoRunState; colors: ThemeColors; compact: boolean }) {
+export function AutoSwitchesFooter({ settings, colors, compact, showShell = true }: { settings: AutoRunState; colors: ThemeColors; compact: boolean; showShell?: boolean }) {
   const muted = { color: colors.foregroundMuted, fontSize: 12, lineHeight: 16 };
   const divider = { borderTopWidth: 1, borderTopColor: withAlpha(colors.border, 0.6), paddingTop: 10, gap: 4 };
 
@@ -71,7 +71,7 @@ export function AutoSwitchesFooter({ settings, colors, compact }: { settings: Au
   const save = (next: Partial<AutoRunValues>) => void settings.save({ ...settings.values, ...next }, settings.revision);
   return (
     <View style={divider}>
-      <ShellChoice value={settings.values.shell} saving={settings.saving} colors={colors} compact={compact} onChoose={(shell) => save({ shell })} />
+      {showShell ? <ShellChoice value={settings.values.shell} saving={settings.saving} colors={colors} compact={compact} onChoose={(shell) => save({ shell })} /> : null}
       <Row label="Auto-run" value={run} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ run: value })} />
       <Row label="Auto forward results" value={send} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ send: value })} />
       <Row label="Forward my own commands" value={own} disabled={settings.saving} colors={colors} compact={compact} onChange={(value) => save({ own: value })} />

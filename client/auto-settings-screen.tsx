@@ -13,7 +13,8 @@ import { AutoSwitches } from "./auto-switches.tsx";
 export function AutoRunSettingsScreen({ theme, layout }: PluginSurfaceProps) {
   return (
     <View style={{ padding: layout.compact ? 16 : 24, gap: 14 }}>
-      <AutoSwitches colors={theme.colors} compact={layout.compact} />
+      {/* The screen owns the labelled Shell on Windows control below, so the footer hides its own. */}
+      <AutoSwitches colors={theme.colors} compact={layout.compact} showShell={false} />
       <Choices colors={theme.colors} compact={layout.compact} />
     </View>
   );

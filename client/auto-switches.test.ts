@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import React from "react";
 import { clientHarness } from "../test-support/client-harness.mjs";
 
@@ -173,4 +174,17 @@ test("loading renders nothing, a read error offers Reload, and an invalid docume
   const invalidView = AutoSwitchesFooter({ settings: invalid, colors: COLORS, compact: false }) as Element;
   assert.deepEqual(findAll(invalidView, "Text").map(textOf), ["The settings document is damaged."]);
   assert.deepEqual(findAll(invalidView, "Button").map((button) => button.props.label), ["Reload", "Reset"]);
+});
+
+// The settings screen renders its own labelled "Shell on Windows" control, so it hides the footer's.
+// Two controls for one setting is how they drift apart.
+test("showShell false hides the footer's shell choice, and the settings screen passes it", () => {
+  const { AutoSwitchesFooter } = load();
+  const { settings } = ready();
+  const hidden = AutoSwitchesFooter({ settings, colors: COLORS, compact: false, showShell: false }) as Element;
+  const top = childrenOf(hidden);
+  assert.equal(top.filter((child) => nameOf(child) === "ShellChoice").length, 0, "no shell choice when the screen owns it");
+  assert.equal(top.filter((child) => nameOf(child) === "Row").length, 3, "the three switches stay");
+  const screen = readFileSync(new URL("../client/auto-settings-screen.tsx", import.meta.url), "utf8");
+  assert.match(screen, /showShell=\{false\}/, "the settings screen hides the duplicate");
 });
