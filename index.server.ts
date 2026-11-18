@@ -16,6 +16,7 @@ import { createLogStore, defaultLogRoot } from "./server/logs.ts";
 import { autoRun, createAutoRunBudget } from "./server/autorun.ts";
 import { forwardResult } from "./server/forward.ts";
 import { createRunRegistry } from "./server/runs.ts";
+import { registerSettingsRpc } from "./server/settings-rpc.ts";
 import { shellYeahTool } from "./server/tool.ts";
 import { commandFinder, type ShellMode } from "./server/shells.ts";
 import { attachSearch, dismiss, fullOutput, input, scan, send, start, stop, suggest, tail } from "./shared/rpc.ts";
@@ -29,6 +30,9 @@ export default function contribute(server: PluginServerContext) {
   const bind = (ctx: PluginHandlerContext) => (paseo = ctx.paseo);
 
   const autoRunSetting = server.registerSettings(autoRunSettings);
+  // The footer reads the document through this, so it agrees with the settings screen even when the
+  // Pill hub hosts it and its own settings hooks would read the hub's document.
+  registerSettingsRpc(server, autoRunSetting);
   // An unreadable setting counts as off: nothing starts or sends on a guess.
   const autoSetting = async (name: "run" | "send" | "own") => {
     const state = await autoRunSetting.read();

@@ -13,8 +13,9 @@ import { AutoSwitches } from "./auto-switches.tsx";
 export function AutoRunSettingsScreen({ theme, layout }: PluginSurfaceProps) {
   return (
     <View style={{ padding: layout.compact ? 16 : 24, gap: 14 }}>
-      {/* The screen owns the labelled Shell on Windows control below, so the footer hides its own. */}
-      <AutoSwitches colors={theme.colors} compact={layout.compact} showShell={false} />
+      {/* The screen owns the labelled Shell on Windows and Agent handoff controls below, so the
+          footer hides its own. Two controls for one setting is how they drift apart. */}
+      <AutoSwitches colors={theme.colors} compact={layout.compact} showShell={false} showHandoff={false} />
       <Choices colors={theme.colors} compact={layout.compact} />
     </View>
   );

@@ -2,6 +2,7 @@ import { defineAttachmentSource, defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 import { LIMITS } from "./limits.ts";
 import { liveView, runRow } from "./row.ts";
+import { autoRunSettings } from "./settings.ts";
 
 const runId = z.string().regex(/^[a-z0-9-]{6,64}$/);
 const agentId = z.string().min(1);
@@ -114,6 +115,27 @@ export const dismiss = defineRpc({
   input: z.object({ agentId, runId, command: z.string(), cwd: z.string() }),
   output: z.object({ ok: z.literal(true) }),
 });
+
+// The auto-run document as it crosses the wire. `revision` is the store's hash of the saved file:
+// every write carries the revision it read, and the store answers `conflict` rather than
+// overwriting a document another surface saved after that read.
+const autoRunValues = autoRunSettings.schema;
+export const autoRunState = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("ready"), revision: z.string(), values: autoRunValues }),
+  z.object({ status: z.literal("invalid"), revision: z.string(), error: z.string() }),
+]);
+export const autoRunWriteResult = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("saved"), revision: z.string(), values: autoRunValues }),
+  z.object({ status: z.literal("conflict"), error: z.string() }),
+  z.object({ status: z.literal("invalid"), error: z.string() }),
+]);
+
+// The popover's read of the auto-run document, for a popover the Pill hub hosts: `useSettings`
+// there reads the hub's settings, but this call reaches this plugin, and its handler returns the
+// same document the run behaviour reads. The write is the host's own `settings.auto-run.write`
+// (declared in client/host-settings.ts): only the daemon's settings store changes the document, so
+// there is one revision rule for the footer, the settings screen and any other client.
+export const settingsRead = defineRpc({ name: "shell-yeah.settings.read", input: z.object({}), output: autoRunState });
 
 export const commandOutputSource = defineAttachmentSource({
   id: "command-output",
