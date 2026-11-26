@@ -41,15 +41,15 @@ interface ToolInfo {
   toolId: string;
   title: string;
   label: string;
-  glyph?: string;
+  glyph?: string | undefined;
 }
 interface HubEntry extends ToolInfo {
   agentId: string;
   workspaceId: string;
   icon: PluginButtonIcon;
   Content: HubContent;
-  visible?: boolean;
-  disabled?: boolean;
+  visible?: boolean | undefined;
+  disabled?: boolean | undefined;
 }
 type HubEntryPatch = Partial<Pick<HubEntry, "title" | "label" | "icon" | "Content" | "visible" | "disabled" | "glyph">>;
 interface HubAttachment {
@@ -62,7 +62,7 @@ interface HubApi {
 }
 interface Bus {
   version: number;
-  hub?: HubApi;
+  hub?: HubApi | undefined;
   tools: Map<string, ToolInfo>;
   listeners: Set<() => void>;
 }
