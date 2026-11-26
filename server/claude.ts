@@ -27,7 +27,7 @@ export type HandoffMode = "suggest" | "everything";
 // The one sentence the mode changes. With handoff off, the agent runs everything else itself; with
 // it on, every command has to reach Shell Yeah, so the agent never reaches for its own shell tool.
 const CLOSING: Record<HandoffMode, string> = {
-  suggest: "Run everything else yourself.",
+  suggest: "Otherwise run commands yourself as you normally would; this feature doesn't change what you're allowed to do.",
   everything:
     "Every shell command must go through Shell Yeah: never run one with your own shell tool. If no Run card appears under your message, say which command you meant to hand over and stop; the user decides what runs.",
 };
@@ -35,18 +35,18 @@ const CLOSING: Record<HandoffMode, string> = {
 const HANDOFF_HEAD = `<${HANDOFF_TAG}>
 This chat has a /sh feature: the user can run a shell command as themselves, on their own machine, in your working directory, and watch the output. You do not see that output unless they send it.
 
-When you want the user to run a command instead of running it yourself, put it alone in a fenced block whose info string is \`sh run\`. Make the first line a comment that says in a few plain words what the command does, for someone who doesn't read shell:
+When you need the user to run a command instead of running it yourself, put it alone in a fenced block whose info string is \`sh run\`. Make the first line a comment that says in a few plain words what the command does, for someone who doesn't read shell:
 
 \`\`\`sh run
 # Log in to GitHub in your browser
 gh auth login --web
 \`\`\`
 
-The block becomes a card under your message: your comment as its title, the command, and a Run button. Use it when the command needs the user's login, password, 2FA code or other secret (it runs in a terminal, so the user can answer its prompts); when your sandbox or permissions block it; or when it is something the user should own, like a deploy, a publish or deleting data. `;
+The block becomes a card under your message: your comment as its title, the command, and a Run button. Use it when you can't run the command yourself: it needs the user's login, password, 2FA code or other secret (it runs in a terminal, so the user can answer its prompts), or your sandbox or permissions block it. Also use it when it is something the user should own, like a deploy, a publish or deleting data, or when the user asks for a command to run themselves. `;
 
 const HANDOFF_TAIL = `
 
-Every command you want the user to run gets its own \`sh run\` block. Never leave one only in a sentence or in inline code, even one you mention in passing. Only the block gives the user a Run button.
+Every command you need the user to run gets its own \`sh run\` block. Never leave one only in a sentence or in inline code; only the block gives the user a Run button. Commands you run yourself don't need a block.
 
 One command or one short script per block, after its title comment. No "$" prompt, no other commentary and no sample output inside. Before the block, say in a sentence why it's needed. After the block, stop and wait: don't assume it ran. The user sends you the output if they want you to see it.
 
@@ -216,7 +216,7 @@ export function proposalRow(input: { agentId: string; cwd: string; turnKey: stri
 }
 
 // Commands that already have a run row (any phase) after the latest reply, so a
-// repeated turn_ended, a rescan, or a plugin reload never shows a card twice.
+// repeated agent.turn.after, a rescan, or a plugin reload never shows a card twice.
 export function commandsAlreadyShown(timeline: Timeline): Set<string> {
   let lastReply = -1;
   timeline.forEach((item, index) => {

@@ -4,7 +4,7 @@
 
 > A fork of [Shell Yeah](https://github.com/stevecastaneda/paseo-plugins/tree/main/shell-yeah) by Steve Castaneda (MIT), with two extra switches in the Run window: **Auto-run** and **Auto forward results**. See [Running commands automatically](#running-commands-automatically) and [FORK.md](FORK.md), which also covers how it stays in sync with the original.
 
-A plugin for Paseo 0.13 and later. Type `/sh` and a command in the message box to run it yourself, in the agent's folder, with live output in the chat. The agent sees the output only if you send it.
+A plugin for Paseo 0.15 and later. Type `/sh` and a command in the message box to run it yourself, in the agent's folder, with live output in the chat. The agent sees the output only if you send it.
 
 It's the Paseo version of Claude Code's `!` mode. It's also how an agent hands you a command it can't run itself: a login that needs your browser, a deploy behind your VPN, a publish that needs your 2FA code. The command shows up under the agent's reply with a **Run** button.
 
@@ -53,7 +53,7 @@ You can also attach a command's output to your next message: open the attach men
 
 ## Commands from the agent
 
-Agents created after you install the plugin learn one rule: when they want you to run something, they put it alone in a fenced block marked `sh run`, under a one-line comment that says in plain words what it does. The rule also says never to leave a command for you only in a sentence.
+Agents created after you install the plugin learn one rule: when they need you to run something, they put it alone in a fenced block marked `sh run`, under a one-line comment that says in plain words what it does. The rule also says never to leave a command for you only in a sentence. Agents hand you a command only when it needs your login, password or 2FA code, when their sandbox or permissions block it, or when you ask for one. Everything else they run themselves, as they would without the plugin.
 
 ````markdown
 ```sh run
@@ -89,7 +89,7 @@ macOS and Linux ignore the choice: your login shell runs the command either way.
 
 Shell Yeah adds one tagged block to every new agent's system prompt that teaches the `sh run` block. The **Agent handoff** choice on the **Run** settings screen decides how that block ends.
 
-- **Suggest** (the default): the agent runs everything else itself and hands over only what you should run — a login, a deploy, something its sandbox blocks. The block ends with “Run everything else yourself.”
+- **Suggest** (the default): the agent runs everything else itself and hands over only what you should run — a login, a deploy, something its sandbox blocks. The block ends with “Otherwise run commands yourself as you normally would.”
 - **Everything**: every shell command must go through Shell Yeah, the agent must not run one with its own shell tool, and if no Run card appears under its message it says which command it meant to hand over and stops.
 
 The prompt is set when an agent is created, so a change applies to new chats, not to one already running.
@@ -155,6 +155,14 @@ This is a fork, and it has the same plugin ID as the original, so install one or
 Enable plugins under **Settings → Plugins** on the Paseo host. You need Node.js 22.18 or later on the daemon host.
 
 ## Changelog
+
+### 1.5.0
+
+- [Improved] **Needs Paseo 0.15 or later.** Shell Yeah now uses the plugin hook names from Paseo 0.15, so it keeps working after Paseo drops the old names in April 2027. On an older Paseo, the version you already have keeps working. Nothing else changes.
+
+### 1.4.2
+
+- [Fixed] **Agents run the commands they're allowed to run.** Before, new agents handed you deploys, publishes and deletes as Run cards even when they could run those commands themselves. Now they hand you a command only when it needs your login, password or 2FA code, when their sandbox or permissions block it, or when you ask for one. Chats that started before you update keep the old rule.
 
 ### 1.4.1
 

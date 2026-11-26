@@ -70,13 +70,12 @@ test("the session-open hook returns exactly one tool, named shell_yeah_run, and 
         read: async () => ({ status: "ready", revision: "1", values: { run: false, send: false, own: false, shell: "powershell", handoff: "suggest" } }),
         subscribe: () => () => {},
       }),
-      before: (name: string, handler: never) => { before.set(name, handler); return () => {}; },
-      on: () => () => {},
+      addHook: (name: string, handler: never) => { before.set(name, handler); return () => {}; },
       handle: () => {},
     };
     const cleanup = contribute(server as never);
     try {
-      const open = before.get("agent.session_open");
+      const open = before.get("agent.open.before");
       assert.ok(open, "the session-open hook is registered");
       const request = { agentId: "agent-1", workspaceId: "ws", provider: "pi", cwd: "C:\\work", reason: "create", purpose: "interactive", env: {} };
       const result = await open({ request }, {}) as typeof request & { tools: Array<{ name: string; input: unknown; execute: unknown }> };
@@ -113,20 +112,19 @@ test("the create hook injects the handoff block for the mode the setting holds",
         read: async () => ({ status: "ready", revision: "1", values: { run: false, send: false, own: false, shell: "powershell", handoff } }),
         subscribe: () => () => {},
       }),
-      before: (name: string, handler: never) => { before.set(name, handler); return () => {}; },
-      on: () => () => {},
+      addHook: (name: string, handler: never) => { before.set(name, handler); return () => {}; },
       handle: () => {},
     };
     const cleanup = contribute(server as never);
     try {
-      const create = before.get("agent.create");
+      const create = before.get("agent.create.before");
       assert.ok(create);
       const suggested = await create({ request: { config: { systemPrompt: "Be terse." } } }, {}) as { config: { systemPrompt: string } };
       assert.match(suggested.config.systemPrompt, /^Be terse\.\n\n<shell-yeah>/);
-      assert.match(suggested.config.systemPrompt, /Run everything else yourself\./);
+      assert.match(suggested.config.systemPrompt, /Otherwise run commands yourself as you normally would/);
       handoff = "everything";
       const everything = await create({ request: { config: { systemPrompt: "Be terse." } } }, {}) as { config: { systemPrompt: string } };
-      assert.doesNotMatch(everything.config.systemPrompt, /Run everything else yourself/);
+      assert.doesNotMatch(everything.config.systemPrompt, /Otherwise run commands yourself/);
       assert.match(everything.config.systemPrompt, /Every shell command must go through Shell Yeah/);
     } finally {
       cleanup();

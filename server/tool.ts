@@ -6,7 +6,7 @@ import type { RunRegistry } from "./runs.ts";
 // letters, digits and underscores.
 export const SHELL_YEAH_TOOL_NAME = "shell_yeah_run";
 
-// The plugin SDK this fork pins is 0.13, which has no `defineAgentTool` and no `tools` on the
+// The plugin SDK this fork pins no longer matches 0.13, but it still has no `defineAgentTool` and no `tools` on the
 // session-open request; the daemon's agent.open.before guard does accept tools. This is the shape
 // 0.14's helper produces, written out so the tool can be typed here.
 export interface AgentToolDefinition {

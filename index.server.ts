@@ -118,7 +118,7 @@ export default function contribute(server: PluginServerContext) {
   // New agents only: one tagged block in the system prompt, merged after whatever is there. The
   // handoff setting picks which closing instruction the block ends with; the prompt can only be set
   // here, because agent.open.before may change env, tools and mcpServers but not the prompt.
-  server.before("agent.create", async ({ request }) => ({
+  server.addHook("agent.create.before", async ({ request }) => ({
     ...request,
     config: { ...request.config, systemPrompt: withHandoffPrompt(request.config.systemPrompt, await handoffMode()) },
   }));
@@ -126,16 +126,15 @@ export default function contribute(server: PluginServerContext) {
   // Every agent: one tool, so an agent can hand a command over without a prompt instruction. Paseo
   // unions each plugin's returned tools. The cast bridges the pinned 0.13 types, which predate
   // `tools` on this request; the daemon's own guard lists tools as a change it accepts.
-  server.before("agent.session_open", ({ request }) => ({
+  server.addHook("agent.open.before", async ({ request }) => ({
     ...request,
     tools: [shellYeahTool(runs, { agentId: request.agentId, cwd: request.cwd })],
   }) as typeof request);
 
   // Every agent: a finished turn that handed the user a command gets one proposal card per command.
-  server.on("agent.turn_ended", async (event, ctx) => {
+  server.addHook("agent.turn.after", async (event, ctx) => {
     bind(ctx);
     if (event.outcome.kind !== "completed") return;
-    // Paseo 0.13 sends the event with an empty timeline.
     const ref = ctx.paseo.agents.ref(event.agent.id);
     const turn = await fetchTurn((options) => ref.timeline.refetch(options), event.turnId).catch(() => null);
     if (!turn) return;
@@ -149,7 +148,7 @@ export default function contribute(server: PluginServerContext) {
   });
 
   // An archived chat is done with: its saved logs go with it. Archiving a workspace archives its chats.
-  server.on("agent.archived", ({ agent }) => logs.forget(agent.id));
+  server.addHook("agent.archive.after", ({ agent }) => logs.forget(agent.id));
 
   return () => runs.shutdown();
 }
